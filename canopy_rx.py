@@ -43,6 +43,22 @@ st.markdown("""
         margin-bottom: 12px;
         font-size: 14px;
     }
+    .warning-card {
+        background-color: #fff5f5;
+        border-left: 5px solid #e53e3e;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
+    .info-card {
+        background-color: #f0f4f8;
+        border-left: 5px solid #3182ce;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        font-size: 14px;
+    }
     .targeted-card {
         background-color: #fbf8f3;
         border-left: 5px solid #d97706;
@@ -152,7 +168,7 @@ def fetch_environmental_data(latitude, longitude):
         "so2": 4.0, "o3": 30.0, "success": False
     }
 
-# Geocoder Helper (Supports full global lookups including remote locations)
+# Geocoder Helper
 def geocode_location(query, country=None):
     try:
         geolocator = Nominatim(user_agent="canopyrx_clinical_environmental_engine_v5")
@@ -285,16 +301,148 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
                     st.rerun()
 
         with col_details:
-            st.markdown("#### 🔬 Baseline Pathological Risk Profiling")
-            if env["pm25"] > 30.0 or env["no2"] > 25.0:
-                st.markdown('<div class="clinical-card"><strong>🫁 Bronchial Vulnerability: High Risk</strong><br>Elevated PM2.5 particulates trigger respiratory hyper-reactivity, worsening bronchial asthma.</div>', unsafe_allow_html=True)
-            else:
-                st.markdown('<div class="clinical-card" style="border-left-color: #2e7d32;"><strong>🫁 Bronchial Vulnerability: Stable</strong><br>Low particulate concentrations minimize mucosal inflammation.</div>', unsafe_allow_html=True)
+            # ==================================================
+            # 🧬 DYNAMIC PORTFOLIO-BASED PATHOLOGY DIAGNOSTICS
+            # ==================================================
+            st.markdown(f"#### 🔬 Profile Diagnostics: *{clinical_profile}*")
+            
+            if clinical_profile == "None (General Overview)":
+                if env["pm25"] > 30.0 or env["no2"] > 25.0:
+                    st.markdown('<div class="clinical-card"><strong>🫁 Bronchial Vulnerability: Moderate Risk</strong><br>Elevated environmental particulates are currently active. Guard sensitive airways.</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="clinical-card" style="border-left-color: #2e7d32;"><strong>🫁 Bronchial Vulnerability: Stable</strong><br>Low particulate concentrations minimize mucosal inflammation.</div>', unsafe_allow_html=True)
 
-            if apparent_temp > 35.0:
-                st.markdown('<div class="clinical-card"><strong>🩺 Cardiorespiratory & Dermatological Stress: High Risk</strong><br>High apparent temperatures amplify cardiovascular workload and inflammatory skin flare-ups.</div>', unsafe_allow_html=True)
+                if apparent_temp > 35.0:
+                    st.markdown('<div class="clinical-card"><strong>🩺 Cardiorespiratory & Dermatological Stress: Elevated Risk</strong><br>High apparent temperatures amplify vascular workload. Avoid intense midday exposure.</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown('<div class="clinical-card" style="border-left-color: #2e7d32;"><strong>🩺 Thermal Stress: Stable/Normal</strong><br>Comfortable thermal loading reduces immediate cellular heat stress.</div>', unsafe_allow_html=True)
+            
+            elif clinical_profile == "Bronchial Asthma / COPD":
+                st.markdown("⚠️ **Asthma-Specific Air Quality Diagnostics:**")
+                # Air quality parameters strictly trigger specific COPD warnings
+                if env["pm25"] > 15.0 or env["no2"] > 20.0 or env["so2"] > 10.0:
+                    st.markdown(f"""
+                    <div class="warning-card">
+                        <strong>🚨 HIGH BRONCHIAL REACTIVITY WARNING:</strong><br>
+                        • Your current fine particulate level (PM2.5: {round(env['pm25'], 1)} µg/m³) exceeds safe bronchial tolerances.<br>
+                        • <strong>Clinical Advice:</strong> Limit outdoor cardiorespiratory training. Keep rescue bronchodilator inhalers fully accessible.
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class="clinical-card" style="border-left-color: #2e7d32;">
+                        <strong>✨ STABLE AIRWAY COMPLIANCE:</strong><br>
+                        • Ambient particulate and gaseous metrics are within safe thresholds. Low risk of acute bronchospasms.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            elif clinical_profile == "Atopic Dermatitis & Eczema":
+                st.markdown("🧴 **Dermatological Stress Diagnostics:**")
+                if env["humidity"] < 40.0:
+                    st.markdown(f"""
+                    <div class="warning-card">
+                        <strong>🚨 HIGH TRANSEPIDERMAL WATER LOSS (TEWL):</strong><br>
+                        • Ambient Relative Humidity is critical ({env['humidity']}%). This dry air aggressively extracts water from compromised stratum corneum boundaries.<br>
+                        • <strong>Clinical Advice:</strong> Immediately apply high-lipid ceramide creams within 3 minutes of washing. Avoid soap-based cleansers.
+                    </div>
+                    """, unsafe_allow_html=True)
+                elif env["humidity"] > 75.0:
+                    st.markdown(f"""
+                    <div class="info-card">
+                        <strong>🌧️ HYGROSCOPIC SKIN FLARING:</strong><br>
+                        • High relative humidity ({env['humidity']}%) paired with active heat limits natural perspiration cooling.<br>
+                        • <strong>Clinical Advice:</strong> Watch for sweat-induced eczema flares in skin folds. Use lightweight cotton clothing and dry-touch lotions.
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class="clinical-card" style="border-left-color: #2e7d32;">
+                        <strong>✨ STABLE EPIDERMAL HYDRO-BALANCE:</strong><br>
+                        • Current atmospheric humidity is perfectly balanced (40%-60%), maintaining stable epithelial moisture.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            elif clinical_profile == "Allergic Rhinitis / Sinusitis":
+                st.markdown("🤧 **Mucosal Membrane Diagnostics:**")
+                if env["wind"] > 15.0 or env["o3"] > 40.0:
+                    st.markdown(f"""
+                    <div class="warning-card">
+                        <strong>🚨 MUCOSAL INFLAMMATION RISK:</strong><br>
+                        • Wind speeds of {env['wind']} kph are active, which increases airborne allergen and spore counts. Ground-level Ozone ({round(env['o3'], 1)} µg/m³) is compounding mucosal hyper-reactivity.<br>
+                        • <strong>Clinical Advice:</strong> Utilize saline nasal rinses twice daily. Wear a protective mask if commuting.
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class="clinical-card" style="border-left-color: #2e7d32;">
+                        <strong>✨ MUCOSAL CLEARANCE INDICES OPTIMAL:</strong><br>
+                        • Air stagnation and ozone metrics indicate minimal mucosal stress.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            elif clinical_profile == "Cardiovascular Sensitivity":
+                st.markdown("❤️ **Hemodynamic & Vascular Diagnostics:**")
+                if apparent_temp > 32.0 or env["temp"] > 30.0:
+                    st.markdown(f"""
+                    <div class="warning-card">
+                        <strong>🚨 CARDIOVASCULAR HEAT-LOADING EXPOSURE:</strong><br>
+                        • The apparent heat index is high ({round(apparent_temp, 1)}°C), forcing peripheral vasodilation and increasing heart rate to cool down.<br>
+                        • <strong>Clinical Advice:</strong> Avoid outdoor exertion during maximum solar hours. Hydrate proactively with mineral-rich fluids to protect blood pressure.
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown("""
+                    <div class="clinical-card" style="border-left-color: #2e7d32;">
+                        <strong>✨ STABLE HEMODYNAMIC INDEX:</strong><br>
+                        • Ambient temperature is within the vascular comfort range. Minimal climate-induced cardiac stress.
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # ==================================================
+        # 🦟 REGIONAL COMMUNICABLE DISEASES & PREVENTION
+        # ==================================================
+        st.write("---")
+        st.markdown("### 🦟 Regional Bio-Threat Indicator (Communicable Diseases)")
+        
+        # Determine biogeographical risk categories based on coordinates
+        bio_col1, bio_col2 = st.columns([1, 2])
+        
+        with bio_col1:
+            if climate_zone in ["Tropical", "Subtropical"]:
+                st.markdown("#### 🗺️ Active Biome: Tropical/Subtropical Vector Zone")
+                st.error("🚨 **Elevated Risk: Vector-Borne Pathogens**")
+                st.markdown("""
+                *   **Primary Risks:** Dengue, Malaria, Chikungunya, and Water-borne Diarrheal Pathogens.
+                *   **Seasonal Drivers:** Warm temperatures combined with standing water or monsoonal humidity expand local mosquito breeding grounds.
+                """)
             else:
-                st.markdown('<div class="clinical-card" style="border-left-color: #2e7d32;"><strong>🩺 Thermal Stress: Stable/Normal</strong><br>Comfortable thermal loading reduces immediate vascular stress.</div>', unsafe_allow_html=True)
+                st.markdown("#### 🗺️ Active Biome: Temperate/Polar Zone")
+                st.warning("⚠️ **Active Risk: Seasonal Respiratory & Tick-Borne Pathogens**")
+                st.markdown("""
+                *   **Primary Risks:** Influenza, RSV, Lyme Disease (Ixodes ticks), and Rhinovirus.
+                *   **Seasonal Drivers:** Cooler air facilitates indoor transmission networks and respiratory droplet stability.
+                """)
+                
+        with bio_col2:
+            st.markdown("#### 🛡️ Clinical Preventative Interventions")
+            if climate_zone in ["Tropical", "Subtropical"]:
+                st.markdown("""
+                <div style="background-color: #fffaf0; border-left: 5px solid #dd6b20; padding: 15px; border-radius: 4px;">
+                    <strong>🦟 Vector Control & Hydration Measures:</strong><br><br>
+                    1. <strong>Eradicate Breeding Zones:</strong> Conduct inspection of surrounding property (within 100m) to empty standing water (flower pots, tires, AC trays).<br>
+                    2. <strong>Chemical Barrier Defense:</strong> Apply DEET or Picaridin mosquito repellents on exposed skin sections during active mosquito hours (dusk and dawn).<br>
+                    3. <strong>Water Resource Engineering:</strong> Drink exclusively boiled or triple-filtered water to eliminate water-borne enteric bacteria (such as Salmonella or Vibrio species).
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown("""
+                <div style="background-color: #ebf8ff; border-left: 5px solid #3182ce; padding: 15px; border-radius: 4px;">
+                    <strong>❄️ Respiratory Defense & Tick Mitigation Protocols:</strong><br><br>
+                    1. <strong>Aerosol Protection:</strong> Ensure high passive cross-ventilation in shared indoor workspaces to reduce respiratory viral loading.<br>
+                    2. <strong>Vector Clearance (Ticks):</strong> If traveling through tall grasses/woods in temperate areas, wear long sleeves and conduct immediate tick checks within 2 hours of exposure.<br>
+                    3. <strong>Immunological Priming:</strong> Maintain optimal Vitamin D3 levels and acquire annual influenza shields prior to local drop in seasonal temperatures.
+                </div>
+                """, unsafe_allow_html=True)
 
         # Tab metrics
         st.write("---")
@@ -390,7 +538,7 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
         st.markdown("""
         ---
         ### 🧭 How to Use This Portal:
-        1.  **Run the Spatial Engine:** Choose **Search Address / Landmark** or **Direct Coordinates** in the left sidebar, and click **Recalculate Environmental Report** to analyze your local green canopy impact.
+        1.  **Run the Spatial Engine:** Choose **Search Address / Landmark** or **Direct Coordinates** in the left sidebar, select a **Medical Profile** if applicable, and click **Recalculate Environmental Report** to analyze your local green canopy impact.
         2.  **Explore via Map:** On the spatial map, click directly on any street corner, building, or city park to instantly pull up-to-date micro-climate profiles for that exact point.
         3.  **Plan Travel Transitions:** Switch to the **Travel Rx Planner** using the sidebar dropdown, input your origin and target destinations (using global search or coordinates), and calculate your physical acclimatization forecast.
         4.  **Formulate Barrier Care:** Select **Skin & Hair Rx** to view how local atmospheric factors impact your skin. Upgrade to Premium to feed in your specific skin type and hair porosity for customized formulations.
