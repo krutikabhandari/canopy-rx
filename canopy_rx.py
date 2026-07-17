@@ -3,20 +3,13 @@ import folium
 from streamlit_folium import st_folium
 import requests
 
-# Try imports for geocoding and browser evaluations; fall back cleanly if missing
+# Try imports for geocoding; install dynamically if missing
 try:
     from geopy.geocoders import Nominatim
 except ImportError:
     import os
     os.system('pip install geopy')
     from geopy.geocoders import Nominatim
-
-try:
-    from streamlit_js_eval import streamlit_js_eval
-except ImportError:
-    import os
-    os.system('pip install streamlit-js-eval')
-    from streamlit_js_eval import streamlit_js_eval
 
 # =========================================================================
 # 🩺 1. PAGE CONFIGURATION & ARCHITECTURE THEME
@@ -153,28 +146,8 @@ st.session_state.user_tier = "Premium" if "Premium" in auth_mode else "Free"
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🗺️ Geographic Tracking")
 
-# AIRTIGHT BROWSER SATELLITE TRACKING COMPONENT (Using streamlit-js-eval)
-st.sidebar.markdown("#### 📍 Live Satellite Tracking")
-
-if st.sidebar.button("📌 Detect My Live Location", use_container_width=True):
-    with st.spinner("Acquiring GPS Satellite connection..."):
-        # Executes native browser location evaluation cleanly bypassing iframe sandboxes
-        loc = streamlit_js_eval(js_expressions="navigator.geolocation.getCurrentPosition(pos => { return pos.coords.latitude + ',' + pos.coords.longitude; })", key="GPS_LOCK")
-        if loc and "," in str(loc):
-            try:
-                lat_val, lon_val = map(float, str(loc).split(","))
-                st.session_state.lat = lat_val
-                st.session_state.lon = lon_val
-                st.session_state.resolved_address = ""  # Triggers fresh reverse lookup
-                st.session_state.engine_active = True
-                st.rerun()
-            except Exception as e:
-                st.sidebar.error("Could not parse returned coordinates.")
-
-st.sidebar.markdown("---")
-
 # Manual Fallback System
-input_mode = st.sidebar.radio("Manual Location Overrides:", ["Search Address / Landmark", "Direct Coordinates"])
+input_mode = st.sidebar.radio("Location Entry Mode:", ["Search Address / Landmark", "Direct Coordinates"])
 
 if input_mode == "Search Address / Landmark":
     country_option = st.sidebar.selectbox("Region / Country:", ["India", "United States", "United Kingdom", "Global / Other"])
@@ -183,7 +156,7 @@ if input_mode == "Search Address / Landmark":
     if st.sidebar.button("Search & Analyze Location", use_container_width=True):
         if search_query:
             try:
-                geolocator = Nominatim(user_agent="canopy_rx_platform_engine_v3")
+                geolocator = Nominatim(user_agent="canopy_rx_platform_engine_v4")
                 final_q = f"{search_query}, {country_option}" if country_option != "Global / Other" else search_query
                 loc_data = geolocator.geocode(final_q, timeout=6)
                 if loc_data:
@@ -211,7 +184,7 @@ else:
 # Run Geolocation Address Resolution Processing
 if st.session_state.engine_active and not st.session_state.resolved_address and st.session_state.lat and st.session_state.lon:
     try:
-        geolocator = Nominatim(user_agent="canopy_rx_platform_engine_v3")
+        geolocator = Nominatim(user_agent="canopy_rx_platform_engine_v4")
         resolved_loc = geolocator.reverse(f"{st.session_state.lat}, {st.session_state.lon}", timeout=4)
         st.session_state.resolved_address = resolved_loc.address if resolved_loc else f"Coordinates: {st.session_state.lat}, {st.session_state.lon}"
     except Exception:
@@ -400,8 +373,8 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
         fill_opacity=0.08
     ).add_to(m)
     folium.Marker([st.session_state.lat, st.session_state.lon], popup="Target Scanning Zone").add_to(m)
-    st_folium(m, width=1000, height=380, key="canopy_rx_premium_map_v3")
+    st_folium(m, width=1000, height=380, key="canopy_rx_premium_map_v4")
 
 else:
     # Onboard Loading Screen
-    st.info("👈 Set your target scanning coordinates or use the live satellite detection tool in the sidebar to populate analysis dashboards.")
+    st.info("👈 Set your target scanning coordinates or search a landmark in the sidebar to populate the analysis dashboards.")
