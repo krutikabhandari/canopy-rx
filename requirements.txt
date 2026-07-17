@@ -1,4 +1,4 @@
-folium
-streamlit-folium
-pandas
+requests
 geopy
+streamlit-folium
+streamlit-js-eval
