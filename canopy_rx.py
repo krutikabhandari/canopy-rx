@@ -178,9 +178,13 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
         with st.spinner("Retrieving live environmental sensor feeds..."):
             weather_res = requests.get(weather_url, params=weather_params, timeout=10).json()
             aq_res = requests.get(aq_url, params=aq_params, timeout=10).json()
-            # TEMPORARY DEBUG LINES
-        st.write("Weather API Response:", weather_res)
-        st.write("Air Quality API Response:", aq_res)
+            
+            # This will show us the actual API error in the app if it fails!
+            if "error" in weather_res:
+                st.error(f"Weather API Error: {weather_res.get('reason')}")
+            if "error" in aq_res:
+                st.error(f"Air Quality API Error: {aq_res.get('reason')}")
+
             live_temp = weather_res["current"]["temperature_2m"]
             live_humidity = weather_res["current"]["relative_humidity_2m"]
             live_pm25 = aq_res["current"]["pm2_5"]
@@ -188,7 +192,6 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
     except Exception as e:
         st.error(f"Failed to fetch live API data: {e}. Reverting to baseline simulation.")
         live_temp, live_humidity, live_pm25, live_pm10 = 30.0, 50.0, 25.0, 40.0
-
     # SCIENTIFIC GEOGRAPHIC INTELLIGENCE (Canopy Scoring)
     # Check if location corresponds to Mumbai or Nashik coordinates
     is_mumbai = (18.8 <= lat <= 19.3) and (72.7 <= lon <= 73.1)
