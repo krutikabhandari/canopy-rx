@@ -89,17 +89,57 @@ if "engine_active" not in st.session_state:
     st.session_state.engine_active = False
 
 # --- LIVE LOCATION DETECTION ---
-def use_live_gps():
-    try:
-        loc_str = streamlit_js_eval(data_of='navigator.geolocation.getCurrentPosition((pos) => {return pos.coords.latitude + "," + pos.coords.longitude})', target_id='gps_fetch')
-        if loc_str:
-            glat, glon = map(float, loc_str.split(','))
-            st.session_state.lat = glat
-            st.session_state.lon = glon
-            st.session_state.engine_active = True
-            st.toast("🎯 Real-time device location retrieved successfully!", icon="📍")
-    except Exception as e:
-        st.sidebar.error("Could not obtain device location. Please ensure location permissions are enabled.")
+# --- FIND THIS IN YOUR SIDEBAR SECTION AND REPLACE IT ---
+st.sidebar.markdown("#### 📍 Live Satellite Tracking")
+
+# 1. This HTML/JavaScript script talks directly to the browser's native GPS
+location_html = """
+<div style="display: flex; justify-content: center;">
+    <button onclick="sendLocation()" style="
+        width: 100%; 
+        background-color: #0d8a72; 
+        color: white; 
+        border: none; 
+        padding: 10px; 
+        border-radius: 8px; 
+        cursor: pointer;
+        font-weight: bold;
+        font-family: sans-serif;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.1);
+    ">📌 Detect My Live Location</button>
+</div>
+
+<script>
+    function sendLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                // Send coordinates securely back to Streamlit
+                window.parent.postMessage({
+                    type: 'streamlit:setComponentValue',
+                    value: {lat: lat, lon: lon}
+                }, '*');
+            }, function(error) {
+                alert("Location access denied or unavailable. Please check your browser permissions.");
+            });
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+</script>
+"""
+
+# 2. Embed the component into the sidebar
+import streamlit.components.v1 as components
+gps_data = components.html(location_html, height=50)
+
+# 3. Catch the coordinates when the user clicks the button
+if gps_data:
+    st.session_state.lat = gps_data.get("lat")
+    st.session_state.lon = gps_data.get("lon")
+    st.session_state.engine_active = True
 
 def activate_engine():
     st.session_state.engine_active = True
