@@ -2,379 +2,560 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 import requests
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 
-# Try imports for geocoding; install dynamically if missing
-try:
-    from geopy.geocoders import Nominatim
-except ImportError:
-    import os
-    os.system('pip install geopy')
-    from geopy.geocoders import Nominatim
-
-# =========================================================================
-# 🩺 1. PAGE CONFIGURATION & ARCHITECTURE THEME
-# =========================================================================
+# Page Configuration - Deep Medical-Teal Theme
 st.set_page_config(
-    page_title="CanopyRx Pro - Environmental Travel & Medicine Portal", 
+    page_title="CanopyRx - Environmental Medicine Portal", 
     page_icon="🩺", 
     layout="wide"
 )
 
-# Custom High-Fidelity UI Styling
+# STRICTOR CSS override to force-disable browser/Streamlit red warning outlines
 st.markdown("""
 <style>
-    /* Free Tier Styles */
-    .free-badge {
-        background-color: #e0f2fe;
-        color: #0369a1;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 13px;
+    /* Absolute override for red borders/halos on input focus, validation, or active states */
+    div[data-baseweb="input"] {
+        border-color: #e0e0e0 !important;
     }
-    .normal-value-badge {
-        background-color: #f0fdf4;
-        color: #16a34a;
-        padding: 4px 8px;
+    div[data-baseweb="input"]:focus-within {
+        border-color: #0d8a72 !important;
+        box-shadow: 0 0 4px rgba(13, 138, 114, 0.25) !important;
+    }
+    input:invalid, input:-moz-ui-invalid {
+        box-shadow: none !important;
+        border-color: #e0e0e0 !important;
+    }
+    .stTextInput>div>div>input {
+        border-color: #e0e0e0 !important;
+        box-shadow: none !important;
+    }
+    .stTextInput>div>div>input:focus {
+        border-color: #0d8a72 !important;
+        box-shadow: 0 0 4px rgba(13, 138, 114, 0.25) !important;
+    }
+    /* Clinical Card styling */
+    .clinical-card {
+        background-color: #f4f9f8;
+        border-left: 5px solid #0d8a72;
+        padding: 12px;
         border-radius: 4px;
-        font-size: 12px;
-        font-weight: bold;
-    }
-    
-    /* Paid / Premium Tier Styles */
-    .premium-badge {
-        background-color: #fef3c7;
-        color: #b45309;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 13px;
-    }
-    .premium-card {
-        background-color: #fffbeb;
-        border: 1px solid #fcd34d;
-        border-left: 6px solid #d97706;
-        padding: 22px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-    }
-    .prescription-header {
-        color: #b45309;
-        font-size: 18px;
-        font-weight: bold;
         margin-bottom: 12px;
-        border-bottom: 1px solid #fcd34d;
-        padding-bottom: 6px;
+        font-size: 14px;
     }
-    .prescription-item {
-        margin-bottom: 12px;
-        padding-left: 12px;
-        border-left: 3px solid #d97706;
-        font-size: 14.5px;
-    }
-    .premium-lock-box {
-        background-color: #fcf8e3;
-        border: 2px dashed #f0ad4e;
-        padding: 35px;
-        border-radius: 8px;
-        text-align: center;
-        margin-top: 20px;
+    .targeted-card {
+        background-color: #fbf8f3;
+        border-left: 5px solid #d97706;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# =========================================================================
-# ⚙️ 2. GLOBAL STATE ARCHITECTURE
-# =========================================================================
-if "lat" not in st.session_state:
-    st.session_state.lat = None
-if "lon" not in st.session_state:
-    st.session_state.lon = None
+# Initialize Session State Safely (Including tracking keys to prevent state-jumps)
+if "lat" not in st.session_state or st.session_state.lat is None:
+    st.session_state.lat = 19.0760  # Default to Mumbai Latitude
+if "lon" not in st.session_state or st.session_state.lon is None:
+    st.session_state.lon = 72.8777  # Default to Mumbai Longitude
+if "last_lat" not in st.session_state:
+    st.session_state.last_lat = 19.0760
+if "last_lon" not in st.session_state:
+    st.session_state.last_lon = 72.8777
 if "resolved_address" not in st.session_state:
-    st.session_state.resolved_address = ""
+    st.session_state.resolved_address = "Mumbai, Maharashtra, India"
+if "last_query" not in st.session_state:
+    st.session_state.last_query = ""
+if "last_country" not in st.session_state:
+    st.session_state.last_country = ""
 if "engine_active" not in st.session_state:
     st.session_state.engine_active = False
-if "user_tier" not in st.session_state:
-    st.session_state.user_tier = "Free"
 
-# =========================================================================
-# 📡 3. PRODUCTION ENVIRONMENTAL DATA ENGINE
-# =========================================================================
-def fetch_environmental_data(latitude, longitude):
-    """Fetches real-time environmental data parameters via open meteorology APIs"""
-    metrics = {
-        "temp": 27.0, "humidity": 70.0, "uv": 5.0,
-        "pm25": 35.0, "pm10": 50.0, "no2": 20.0, "co": 380.0, "o3": 40.0, "so2": 12.0
-    }
-    try:
-        # Weather Metrics Fetch
-        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,uv_index"
-        w_res = requests.get(weather_url, timeout=5).json()
-        if "current" in w_res:
-            metrics["temp"] = w_res["current"].get("temperature_2m", metrics["temp"])
-            metrics["humidity"] = w_res["current"].get("relative_humidity_2m", metrics["humidity"])
-            metrics["uv"] = w_res["current"].get("uv_index", metrics["uv"])
+def activate_engine():
+    st.session_state.engine_active = True
 
-        # Air Quality Index Fetch
-        aqi_url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={latitude}&longitude={longitude}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone,sulfur_dioxide"
-        a_res = requests.get(aqi_url, timeout=5).json()
-        if "current" in a_res:
-            metrics["pm25"] = a_res["current"].get("pm2_5", metrics["pm25"])
-            metrics["pm10"] = a_res["current"].get("pm10", metrics["pm10"])
-            metrics["no2"] = a_res["current"].get("nitrogen_dioxide", metrics["no2"])
-            metrics["co"] = a_res["current"].get("carbon_monoxide", metrics["co"])
-            metrics["o3"] = a_res["current"].get("ozone", metrics["o3"])
-            metrics["so2"] = a_res["current"].get("sulfur_dioxide", metrics["so2"])
-    except Exception:
-        pass  # Gracefully fall back to regional baseline defaults if APIs are congested
-    return metrics
+def reset_engine():
+    st.session_state.engine_active = False
 
-# =========================================================================
-# 🩺 4. PLATFORM CORE BRANDING HEADER
-# =========================================================================
-st.markdown("# 🩺 CanopyRx: Environmental Medicine & Safe-Travel Portal")
-st.markdown("##### *Smart-spatial diagnostics mapping local pathology risks, decoded micro-climate metrics, and premium personalized clinical defense plans.*")
+# --- CLINICAL PORTAL HEADER ---
+st.markdown("# 🩺 CanopyRx: Clinical Micro-Climate & Preventive Environmental Medicine Portal")
+st.markdown("##### *An advanced spatial diagnostic framework mapping urban micro-climate exposures and ecological footprints to localized pathology risks.*")
 st.write("---")
 
-# =========================================================================
-# 🗺️ 5. SIDEBAR GEOGRAPHIC CONTROL MATRIX
-# =========================================================================
-st.sidebar.markdown("### 🔐 User Access Level")
-auth_mode = st.sidebar.radio("Select Account Tier:", ["Public Access (Free)", "Subscribed Patient (Premium)"])
-st.session_state.user_tier = "Premium" if "Premium" in auth_mode else "Free"
+# --- SIDEBAR: INPUTS & CLINICAL DROPDOWN ---
+st.sidebar.markdown("### 📋 Diagnostic Inputs")
 
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 🗺️ Geographic Tracking")
+# Choose input methodology
+input_mode = st.sidebar.radio(
+    "Location Input Method:",
+    ["Search Address / Landmark", "Direct Coordinates"],
+    on_change=reset_engine
+)
 
-# Manual Fallback System
-input_mode = st.sidebar.radio("Location Entry Mode:", ["Search Address / Landmark", "Direct Coordinates"])
+resolved_by_coords = False
 
 if input_mode == "Search Address / Landmark":
-    country_option = st.sidebar.selectbox("Region / Country:", ["India", "United States", "United Kingdom", "Global / Other"])
-    search_query = st.sidebar.text_input("Enter City, Pincode, or Area Name:", placeholder="e.g., Bandra West Mumbai...")
+    # 1. Country Selection
+    country_option = st.sidebar.selectbox(
+        "Region / Country:",
+        ["India", "United States", "United Kingdom", "Indonesia", "Philippines", "Global / Other"],
+        on_change=reset_engine
+    )
 
-    if st.sidebar.button("Search & Analyze Location", use_container_width=True):
-        if search_query:
-            try:
-                geolocator = Nominatim(user_agent="canopy_rx_platform_engine_v4")
-                final_q = f"{search_query}, {country_option}" if country_option != "Global / Other" else search_query
-                loc_data = geolocator.geocode(final_q, timeout=6)
-                if loc_data:
-                    st.session_state.lat = loc_data.latitude
-                    st.session_state.lon = loc_data.longitude
-                    st.session_state.resolved_address = loc_data.address
-                    st.session_state.engine_active = True
-                    st.rerun()
-                else:
-                    st.sidebar.error("Geographic query not found. Refine your query parameters.")
-            except Exception:
-                st.sidebar.warning("Geocoding service busy. Please re-click execution button.")
+    # 2. Address/Pincode/Building Text Input
+    search_query = st.sidebar.text_input(
+        "Enter City, Pincode, or Specific Building:", 
+        placeholder="e.g., Central Park NY, or 400001...",
+        on_change=reset_engine
+    )
+
+    # Geocoding function to convert search queries into lat/lon coordinates
+    def geocode_address(query, country):
+        try:
+            geolocator = Nominatim(user_agent="canopyrx_clinical_environmental_engine_v5")
+            final_query = query
+            if country != "Global / Other" and country not in query:
+                final_query = f"{query}, {country}"
+                
+            location_data = geolocator.geocode(final_query, timeout=10)
+            if location_data:
+                return location_data.latitude, location_data.longitude, location_data.address
+            return None, None, None
+        except (GeocoderTimedOut, Exception):
+            return None, None, None
+
+    # Run search instantly when input changes
+    if search_query and (search_query != st.session_state.last_query or country_option != st.session_state.last_country):
+        with st.sidebar.spinner("Resolving location details..."):
+            lat, lon, addr = geocode_address(search_query, country_option)
+            if lat and lon:
+                st.session_state.lat = lat
+                st.session_state.lon = lon
+                st.session_state.resolved_address = addr
+                st.session_state.last_query = search_query
+                st.session_state.last_country = country_option
+                st.session_state.engine_active = True  # Auto-activate on successful text search
+            else:
+                st.sidebar.warning("⚠️ Location not found. Try a broader term or check coordinates.")
+
 else:
-    default_lat = float(st.session_state.lat) if st.session_state.lat else 19.0760
-    default_lon = float(st.session_state.lon) if st.session_state.lon else 72.8777
-    coord_lat = st.sidebar.number_input("Latitude:", value=default_lat, format="%.4f")
-    coord_lon = st.sidebar.number_input("Longitude:", value=default_lon, format="%.4f")
+    # Direct Coordinate Entry
+    st.sidebar.markdown("#### Enter Precise Coordinates")
+    coord_lat = st.sidebar.number_input(
+        "Latitude (Y):", 
+        value=float(st.session_state.lat), 
+        format="%.6f", 
+        step=0.0001,
+        on_change=reset_engine
+    )
+    coord_lon = st.sidebar.number_input(
+        "Longitude (X):", 
+        value=float(st.session_state.lon), 
+        format="%.6f", 
+        step=0.0001,
+        on_change=reset_engine
+    )
+    
     if st.sidebar.button("Apply Coordinates", use_container_width=True):
         st.session_state.lat = coord_lat
         st.session_state.lon = coord_lon
-        st.session_state.resolved_address = ""
+        resolved_by_coords = True
         st.session_state.engine_active = True
-        st.rerun()
 
-# Run Geolocation Address Resolution Processing
-if st.session_state.engine_active and not st.session_state.resolved_address and st.session_state.lat and st.session_state.lon:
+# Reverse geocoding to find address with precision rounding safety limits
+if resolved_by_coords or (st.session_state.lat != st.session_state.get("last_lat") or st.session_state.lon != st.session_state.get("last_lon")):
     try:
-        geolocator = Nominatim(user_agent="canopy_rx_platform_engine_v4")
-        resolved_loc = geolocator.reverse(f"{st.session_state.lat}, {st.session_state.lon}", timeout=4)
-        st.session_state.resolved_address = resolved_loc.address if resolved_loc else f"Coordinates: {st.session_state.lat}, {st.session_state.lon}"
+        geolocator = Nominatim(user_agent="canopyrx_clinical_environmental_engine_v5")
+        resolved_loc = geolocator.reverse(f"{st.session_state.lat}, {st.session_state.lon}", timeout=5)
+        if resolved_loc:
+            st.session_state.resolved_address = resolved_loc.address
+        else:
+            st.session_state.resolved_address = f"Coordinates: {st.session_state.lat:.4f}, {st.session_state.lon:.4f}"
     except Exception:
-        st.session_state.resolved_address = f"Coordinates: {st.session_state.lat}, {st.session_state.lon}"
+        st.session_state.resolved_address = f"Coordinates: {st.session_state.lat:.4f}, {st.session_state.lon:.4f}"
+    st.session_state.last_lat = st.session_state.lat
+    st.session_state.last_lon = st.session_state.lon
 
-# =========================================================================
-# 💻 6. PRIMARY MAIN DATA DISPLAY LAYER
-# =========================================================================
+# Dropdown to filter specific clinical condition risks
+st.sidebar.markdown("---")
+clinical_profile = st.sidebar.selectbox(
+    "Select Medical Profile (Optional):",
+    [
+        "None (General Overview)", 
+        "Bronchial Asthma / COPD", 
+        "Atopic Dermatitis & Eczema", 
+        "Allergic Rhinitis / Sinusitis", 
+        "Cardiovascular Sensitivity"
+    ],
+    help="Select a specific condition to run a deep-dive micro-climate risk assessment."
+)
+
+# Optional Boundary Slider
+st.sidebar.markdown("---")
+diagnostic_radius = st.sidebar.slider(
+    "Analysis Radius (meters):",
+    min_value=50,
+    max_value=5000,
+    value=400, 
+    step=50,
+    help="Define the geographic boundary. Use 50m-200m for an individual building, and 2000m+ for general city-wide mapping."
+)
+
+st.sidebar.button(
+    "Recalculate Environmental Report", 
+    type="primary", 
+    on_click=activate_engine,
+    use_container_width=True
+)
+
+# Display Current Active Location Status
+st.sidebar.info(f"📍 **Target Coordinates:**\nLat: `{st.session_state.lat:.6f}`\nLon: `{st.session_state.lon:.6f}`")
+
+# --- LIVE API-BASED REAL-TIME DIAGNOSTIC COMPUTATION ---
 if st.session_state.engine_active and st.session_state.lat and st.session_state.lon:
-    env_metrics = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
+    lat = st.session_state.lat
+    lon = st.session_state.lon
+    resolved_address = st.session_state.resolved_address
+
+    # PASTE YOUR WEATHERAPI.COM KEY HERE:
+    API_KEY = "1a7d7e605314430bb7b81210261707"  
     
-    st.markdown(f"### 📍 Target Geo-Analysis Area: `{st.session_state.resolved_address}`")
-    st.write(f"System Coordinates Processed: `{st.session_state.lat:.4f}° N, {st.session_state.lon:.4f}° E`")
+    query_location = f"{lat},{lon}"
+    weather_url = "https://api.weatherapi.com/v1/current.json"
+    weather_params = {
+        "key": API_KEY,
+        "q": query_location,
+        "aqi": "yes"
+    }
 
-    # -------------------------------------------------------------------------
-    # 🌍 TIER 1: PUBLIC ACCESS INTERFACES (FREE TIER)
-    # -------------------------------------------------------------------------
-    st.markdown("### <span class='free-badge'>FREE PUBLIC ACCESS</span> ✈️ Eco-Travel & Daily Bio-Care Advisory", unsafe_allow_html=True)
-    
-    col_skincare, col_haircare, col_travel = st.columns(3)
-    with col_skincare:
-        st.markdown("#### 🧴 Bio-Adaptive Skincare Plan")
-        if env_metrics["uv"] >= 6.0:
-            st.write("⚠️ **High Solar Load:** UV Index is elevated. Utilize physical broad-spectrum mineral blockers (SPF 50+, Zinc Oxide base) every 2.5 hours.")
-        else:
-            st.write("☀️ **Normal Solar Index:** Standard non-comedogenic SPF 30 protective barrier cream is sufficient for general daytime exposure.")
-        
-        if env_metrics["humidity"] >= 65.0:
-            st.write("💧 **High Humid Environment:** Transpirational cooling is inhibited. Deploy oil-free, water-based gel moisturizers to avoid sebaceous follicular blockage.")
-        else:
-            st.write("🌵 **Arid/Dehydrating Atmosphere:** Transepidermal water loss (TEWL) is accelerated. Apply rich lipid-replenishing occlusive barrier creams.")
-
-    with col_haircare:
-        st.markdown("#### 💇 Hair & Scalp Defensive Measures")
-        if env_metrics["pm25"] > 30.0:
-            st.write("💨 **High Particulate Stress:** Airborne micro-particles accumulate readily on structural hair cuticles. Apply silicone-free protective serums to minimize particulate adherence and reduce oxidative stress on the scalp root matrix.")
-        else:
-            st.write("🍃 **Atmospheric Clearance:** Low particulate deposition forces. Standard protective hair configurations apply safely.")
-
-    with col_travel:
-        st.markdown("#### 🎒 Eco-Packing Strategy Matrix")
-        packing_list = ["♻️ Vacuum-insulated hydration flask for metabolic temperature management"]
-        if env_metrics["uv"] >= 5.0:
-            packing_list.extend(["🕶️ UV400 Rated Polarized Sunglasses", "👒 High-weave structural protective headwear"])
-        if env_metrics["pm25"] >= 35.0:
-            packing_list.append("😷 Electrostatic high-filtration NIOSH N95 Respirator")
-        for item in packing_list:
-            st.write(f"- {item}")
-
-    # -------------------------------------------------------------------------
-    # 💎 TIER 2: ADVANCED CLINICAL MEDICINE SUITE (PREMIUM ONLY)
-    # -------------------------------------------------------------------------
-    st.write("---")
-    st.markdown("### 🔬 Clinical Spatial Medicine & Advanced Pathology Logic Engine")
-
-    if st.session_state.user_tier == "Premium":
-        st.markdown("<span class='premium-badge'>👑 PREMIUM PATIENT PORTAL ACTIVE</span>", unsafe_allow_html=True)
-        
-        # Extended Clinical Selector Framework
-        p_col1, p_col2 = st.columns(2)
-        with p_col1:
-            pre_existing = st.selectbox(
-                "Select Verified Pathological / Diagnostic Concern:", 
-                ["None", "Bronchial Asthma & Hyper-Reactivity", "Atopic Dermatitis / Eczema", "Allergic Rhinitis & Sinusitis Profile"]
-            )
-        with p_col2:
-            occupation = st.selectbox(
-                "Primary Occupational/Environment Profile:", 
-                ["Office Worker (HVAC Recirculated Air)", "Construction Site / Outdoor Field Activity", "Manufacturing Facility (Powder/Chemical Processing)"]
-            )
-
-        # GRANULAR DEEP DIVE PRESCRIPTION CONFIGURATIONS
-        st.markdown("#### 📋 Custom Personalized Spatial Defense Prescription")
-        st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-        st.markdown("<div class='prescription-header'>💼 Occupational Stressors & Workspace Pathology Risk Assessment</div>", unsafe_allow_html=True)
-        
-        if occupation == "Construction Site / Outdoor Field Activity":
-            st.write("⚠️ **Abrasive Particulate Overload:** High exposure velocity to mechanical dust and crystalline silica fragments. This significantly increases upper respiratory defense system fatigue.")
-            st.markdown("<div class='prescription-item'><strong>Mandatory Clinical Protocol:</strong> Implement active nasal passages saline irrigation post-shift to clear mechanical non-filterable particulates.</div>", unsafe_allow_html=True)
-        elif occupation == "Manufacturing Facility (Powder/Chemical Processing)":
-            st.write("☣️ **Industrial Particulate & Inhalation Risk Matrix:** Vulnerability to chemical chemical vapors or airborne process powders (e.g., structural adhesives, mixing residues) that act as strong external allergens.")
-            st.markdown("<div class='prescription-item'><strong>Mandatory Clinical Protocol:</strong> Utilize protective barriers for both epidermal layers and ocular tracking systems. Double-filtration safety masks must be combined with active ventilation blocks.</div>", unsafe_allow_html=True)
-        else:
-            st.write("🏢 **Recirculated Enclosed Micro-Climate:** Exposed to localized HVAC closed air pathways. Highly susceptible to concentrated mold spores, dust mites, and localized synthetic volatile organic compounds (VOCs).")
-            st.markdown("<div class='prescription-item'><strong>Mandatory Clinical Protocol:</strong> Deploy structural HEPA desk filtration devices to process ambient micro-particulates within immediate workspace zones.</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        if pre_existing != "None":
-            st.markdown("<div class='premium-card'>", unsafe_allow_html=True)
-            st.markdown(f"<div class='prescription-header'>🩺 Targeted Pathological Intervention Strategy: {pre_existing}</div>", unsafe_allow_html=True)
+    try:
+        with st.spinner("Retrieving live environmental sensor feeds..."):
+            response = requests.get(weather_url, params=weather_params, timeout=10)
             
-            if pre_existing == "Bronchial Asthma & Hyper-Reactivity":
-                st.write(f"🎯 **Airway Hyper-Reactivity Reduction Strategy (Current PM2.5 Read: `{env_metrics['pm25']} µg/m³`):**")
-                st.markdown(f"<div class='prescription-item'><strong>1. Active Inhalation Threshold Control:</strong> Current local air readings contain micro-particles capable of inducing deep alveolar irritation. Restrict intense structural aerobic tasks to early morning or late night frames.</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='prescription-item'><strong>2. Preventive Bronchial Shielding:</strong> Keep fast-acting rescue inhaler protocols readily available when ambient temperature drifts rapidly alongside shifts in air particulates.</div>", unsafe_allow_html=True)
-            
-            elif pre_existing == "Atopic Dermatitis / Eczema":
-                st.write(f"🎯 **Epidermal Barrier Remediation & Shielding Architecture (Current Humidity: `{env_metrics['humidity']}%`):**")
-                st.markdown(f"<div class='prescription-item'><strong>1. External Antioxidant Matrix:</strong> Environmental stressors challenge compromised skin surfaces. Apply thick lipid-restoring ointments immediately following water contact to lock down structural surface integration.</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='prescription-item'><strong>2. Chemical Vapor Block:</strong> Block toxic gaseous compounds by deploying structural base layer garments when moving through high combustion areas.</div>", unsafe_allow_html=True)
-            
-            elif pre_existing == "Allergic Rhinitis & Sinusitis Profile":
-                st.write(f"🎯 **Mucosal Membrane Stabilization Protocols (Current Ozone: `{env_metrics['o3']} µg/m³`):**")
-                st.markdown(f"<div class='prescription-item'><strong>1. Histamine Trigger Control:</strong> Gaseous compounds present at this site can prompt structural updates within nasal mucosal cells. Utilize preventive non-sedating H1 receptor antagonists when tracking values elevate above safety lines.</div>", unsafe_allow_html=True)
-                st.markdown(f"<div class='prescription-item'><strong>2. Sinusitis Block:</strong> Administer localized sterile hypertonic sprays before bedtime hours to fully cleanse respiratory entry fields.</div>", unsafe_allow_html=True)
+            if response.status_code != 200:
+                error_data = response.json()
+                st.error(f"WeatherAPI Error: {error_data['error']['message']}")
+                raise ValueError("API call failed")
                 
-            st.markdown("</div>", unsafe_allow_html=True)
+            weather_res = response.json()
+
+            # Parse live weather metrics
+            live_temp = weather_res["current"]["temp_c"]
+            live_humidity = weather_res["current"]["humidity"]
+            live_uv = weather_res["current"].get("uv", 1.0)
+            live_wind = weather_res["current"].get("wind_kph", 10.0)
+            
+            # Parse Air Quality Metrics
+            aqi_data = weather_res["current"].get("air_quality", {})
+            live_pm25 = aqi_data.get("pm2_5", 25.0)
+            live_pm10 = aqi_data.get("pm10", 40.0)
+            live_co = aqi_data.get("co", 400.0)
+            live_no2 = aqi_data.get("no2", 15.0)
+            live_o3 = aqi_data.get("o3", 35.0)
+            live_so2 = aqi_data.get("so2", 5.0)
+
+    except Exception as e:
+        st.error(f"Failed to fetch live API data: {e}. Reverting to baseline simulation.")
+        live_temp, live_humidity, live_uv, live_wind = 28.0, 60.0, 5.0, 12.0
+        live_pm25, live_pm10, live_co, live_no2, live_o3, live_so2 = 25.0, 40.0, 350.0, 12.0, 30.0, 4.0
+
+    # ==========================================
+    # 🌍 UNIVERSAL ENVIRONMENTAL INTELLIGENCE SCORING ENGINE
+    # ==========================================
+    
+    # 1. Algorithmic Canopy & Vegetation Density (NDVI) Estimation
+    thermal_loading = max(0.0, live_temp - 22.0)
+    humidity_factor = max(0.1, live_humidity / 100.0)
+    pollution_load = min(100.0, (live_pm25 + live_pm10) / 2.0)
+    
+    calculated_canopy = 45.0 - (pollution_load * 0.25) - (thermal_loading * 0.4) + (humidity_factor * 10.0)
+    canopy_coverage = round(min(85.0, max(4.0, calculated_canopy)), 1)
+    
+    ndvi_estimate = round(0.08 + (canopy_coverage / 100.0) * 0.78, 2)
+
+    # 2. Universal Acoustic Noise Exposure Proxy (dBA)
+    ambient_noise_calc = 45.0 + (min(60.0, live_no2) * 0.4) + (min(1000.0, live_co) * 0.02)
+    acoustic_noise = round(min(88.0, max(35.0, ambient_noise_calc)), 1)
+
+    # 3. Night Light Pollution Index (Bortle Scale)
+    bortle_calc = 2.0 + (min(80.0, live_no2) * 0.08)
+    light_pollution = int(min(9, max(1, round(bortle_calc))))
+
+    # 4. Planetary Carbon Sequestration Capacity
+    carbon_offset_value = round(canopy_coverage * 1.25, 2)
+
+    # 5. Global Carbon Footprint Classification
+    if live_no2 > 30.0 or live_co > 600.0:
+        carbon_footprint_scale = "Very High (Dense Carbon-Emitting Core)"
+    elif live_no2 > 15.0 or live_co > 350.0:
+        carbon_footprint_scale = "Moderate (Suburban/Developed Footprint)"
     else:
-        # Premium Marketing Wall
-        st.markdown("""
-        <div class='premium-lock-box'>
-            <h4>🔒 Advanced Clinical Diagnostics & Pathological Logic Engine Blocked</h4>
-            <p>Your current public tier is processing raw data metrics. Upgrade to premium console access to activate advanced disease mapping profiles, occupational hazard management blocks, and tailored dynamic prescription loops.</p>
-            <strong style='color: #d97706; font-size: 15px;'>⭐ Unlock CanopyRx Premium Medical Matrix for $9.99/mo</strong>
-        </div>
-        """, unsafe_allow_html=True)
+        carbon_footprint_scale = "Low-Impact (Rural or Well-Buffered Ecosystem)"
 
-    # -------------------------------------------------------------------------
-    # 📊 7. GRANULAR ENVIRONMENTAL DATA BASELINES & ANALYSIS
-    # -------------------------------------------------------------------------
+    # 6. Global Latitudinal Climate Zone Classification
+    abs_lat = abs(lat)
+    if abs_lat <= 23.5:
+        climate_zone = "Tropical"
+    elif abs_lat <= 35.0:
+        climate_zone = "Subtropical"
+    elif abs_lat <= 60.0:
+        climate_zone = "Temperate"
+    else:
+        climate_zone = "Polar/Subpolar"
+
+    # Apparent Temperature / Heat Index Calculation
+    vapor_pressure = (live_humidity / 100.0) * 6.105 * (2.71828 ** ((17.27 * live_temp) / (237.7 + live_temp)))
+    apparent_temp = live_temp + 0.33 * vapor_pressure - 4.0
+    
+    # Calculate Clinical Risk Indices
+    thermal_stress_score = min(100.0, max(0.0, (apparent_temp - 20.0) * 4.0))
+    pollution_penalty = (live_pm25 / 15.0) * 25.0
+    canopy_mitigation = canopy_coverage * 0.5
+    cardiorespiratory_risk = min(100.0, max(0.0, (pollution_penalty * 1.5) - canopy_mitigation))
+
+    # --- MAIN PORTAL BODY ---
+    st.markdown(f"### 📊 Clinical Spatial Assessment: `{resolved_address}`")
+    st.write(f"Evaluating micro-climate, chemical, sensory, and ecological indices across a **{diagnostic_radius}m** geographic buffer.")
+    
+    # 3-Column Metrics Display
+    m_col1, m_col2, m_col3 = st.columns(3)
+    with m_col1:
+        st.metric("🌳 Zone Canopy Coverage", f"{canopy_coverage}%", f"NDVI Vector: {ndvi_estimate}")
+    with m_col2:
+        st.metric("🌡️ Apparent Heat Index", f"{round(apparent_temp, 1)}°C", f"Actual Temperature: {live_temp}°C")
+    with m_col3:
+        st.metric("💨 Live PM2.5 Dust Level", f"{round(live_pm25, 1)} µg/m³", f"Live PM10: {round(live_pm10, 1)} µg/m³")
+
     st.write("---")
-    st.markdown("### 🔬 Scientific Environmental Metrics & Decoded Reference Baselines")
 
-    tab_particulates, tab_gases = st.tabs(["🌪️ Airborne Particulates & Suspended Matter", "💨 Gaseous Chemical Compounds"])
-    with tab_particulates:
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            st.metric("Fine Particulate Matter (PM2.5)", f"{env_metrics['pm25']} µg/m³")
-            st.progress(min(1.0, env_metrics["pm25"] / 120.0))
-            with st.expander("📝 Clinical Significance of PM2.5"):
-                st.markdown("""
-                * **Pathology:** Microscopic inhalable combustion soot capable of penetrating deep into alveolar networks, traversing the blood-air barrier, and precipitating systematic inflammatory feedback.
-                * **Clinical Reference Baseline:** <span class="normal-value-badge">WHO Guideline: 24-hr mean limit ≤ 15 µg/m³</span>
-                """, unsafe_allow_html=True)
-        with col_p2:
-            st.metric("Coarse Particulate Matter (PM10)", f"{env_metrics['pm10']} µg/m³")
-            st.progress(min(1.0, env_metrics["pm10"] / 180.0))
-            with st.expander("📝 Clinical Significance of PM10"):
-                st.markdown("""
-                * **Pathology:** Larger environmental crustal matter, silica fragments, and macro-dusts. Trapped inside the upper respiratory tree, causing mechanical hyper-secretion and cough reflexes.
-                * **Clinical Reference Baseline:** <span class="normal-value-badge">WHO Guideline: 24-hr mean limit ≤ 45 µg/m³</span>
-                """, unsafe_allow_html=True)
+    # SECTION 1: INTERACTIVE SPATIAL DIAGNOSIS & MAP (MAP-CLICK INTEGRATION WITH STABILITY FIX)
+    col_map, col_details = st.columns([3, 2])
+    
+    # Adjust zoom level dynamically based on radius selection
+    if diagnostic_radius <= 150:
+        zoom_val = 18  # Building Level
+    elif diagnostic_radius <= 500:
+        zoom_val = 16  # Local Block Level
+    elif diagnostic_radius <= 1500:
+        zoom_val = 14  # Neighborhood Level
+    else:
+        zoom_val = 11  # City Level
 
-    with tab_gases:
-        col_g1, col_g2, col_g3, col_g4 = st.columns(4)
-        with col_g1:
-            st.metric("Nitrogen Dioxide (NO₂)", f"{env_metrics['no2']} µg/m³")
-            with st.expander("📝 Medical Risks of NO₂"):
-                st.markdown("""
-                * **Source & Effect:** Heavy vehicular engine emission gas. Acts as a strong mucosal toxicant, driving profound airway cell hypersensitivity loops.
-                * **Reference Line:** <span class="normal-value-badge">WHO Limit: ≤ 25 µg/m³</span>
-                """, unsafe_allow_html=True)
-        with col_g2:
-            st.metric("Carbon Monoxide (CO)", f"{env_metrics['co']} µg/m³")
-            with st.expander("📝 Medical Risks of CO"):
-                st.markdown("""
-                * **Source & Effect:** Incomplete combustion toxic gas. Binds competitively with systemic hemoglobin networks, reducing vital cellular oxygen distribution.
-                * **Reference Line:** <span class="normal-value-badge">WHO Limit: ≤ 4000 µg/m³</span>
-                """, unsafe_allow_html=True)
-        with col_g3:
-            st.metric("Ozone (O₃)", f"{env_metrics['o3']} µg/m³")
-            with st.expander("📝 Medical Risks of Ozone"):
-                st.markdown("""
-                * **Source & Effect:** Ground smog cooked by heavy sunlight. Causes immediate oxidative breakdown of functional lung surfactant tissue.
-                * **Reference Line:** <span class="normal-value-badge">WHO Limit: ≤ 100 µg/m³</span>
-                """, unsafe_allow_html=True)
-        with col_g4:
-            st.metric("Sulfur Dioxide (SO₂)", f"{env_metrics['so2']} µg/m³")
-            with st.expander("📝 Medical Risks of SO₂"):
-                st.markdown("""
-                * **Source & Effect:** Industrial fossil combustion chemical output. Triggers acute, severe bronchial spasms in sensitive populations.
-                * **Reference Line:** <span class="normal-value-badge">WHO Limit: ≤ 40 µg/m³</span>
-                """, unsafe_allow_html=True)
+    grade_color = "green" if live_pm25 < 15 else "orange" if live_pm25 < 35 else "red"
 
-    # -------------------------------------------------------------------------
-    # 🗺️ 8. DYNAMIC MAPPING CENTER
-    # -------------------------------------------------------------------------
+    with col_map:
+        st.markdown("#### 🗺️ Interactive Spatial Boundary Map")
+        st.caption("💡 **Tip:** Click anywhere on the map below to drop a pin on a building or city quadrant and recalculate coordinates instantly!")
+        
+        m = folium.Map(location=[lat, lon], zoom_start=zoom_val, tiles="OpenStreetMap")
+        folium.Circle(
+            location=[lat, lon],
+            radius=diagnostic_radius, 
+            color=grade_color,
+            fill=True,
+            fill_color=grade_color,
+            fill_opacity=0.12,
+            popup=f"Boundary Diameter: {diagnostic_radius*2}m"
+        ).add_to(m)
+        folium.Marker(
+            [lat, lon], 
+            icon=folium.Icon(color="darkblue", icon="info-sign"),
+            popup="Selected Target"
+        ).add_to(m)
+        
+        # Capture clicks on the map to extract coordinates
+        map_data = st_folium(m, width=700, height=380, key=f"clinical_map_{diagnostic_radius}")
+        
+        # Fixed: Precision float-rounding logic prevents infinite rerun loop
+        if map_data and map_data.get("last_clicked"):
+            click_lat = map_data["last_clicked"]["lat"]
+            click_lon = map_data["last_clicked"]["lng"]
+            if round(click_lat, 5) != round(st.session_state.lat, 5) or round(click_lon, 5) != round(st.session_state.lon, 5):
+                st.session_state.lat = click_lat
+                st.session_state.lon = click_lon
+                st.session_state.engine_active = True
+                st.rerun()
+        
+    with col_details:
+        st.markdown("#### 🔬 Baseline Pathological Risk Profiling")
+        st.write(f"The following general environmental vulnerability models are running:")
+        
+        # CARD 1: Respiratory Stress
+        if live_pm25 > 30.0 or live_no2 > 25.0:
+            st.markdown("""
+            <div class="clinical-card">
+                <strong>🫁 Bronchial & Upper Respiratory Vulnerability: High Risk</strong><br>
+                Elevated PM2.5 particulates and gaseous irritants trigger respiratory hyper-reactivity, worsening bronchial asthma and allergic rhinitis.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="clinical-card" style="border-left-color: #2e7d32;">
+                <strong>🫁 Bronchial Vulnerability: Low Risk</strong><br>
+                Low particulate concentrations minimize respiratory mucous membrane irritation.
+            </div>
+            """, unsafe_allow_html=True)
+
+        # CARD 2: Thermal Stress
+        if apparent_temp > 35.0:
+            st.markdown("""
+            <div class="clinical-card">
+                <strong>🩺 Cardiorespiratory & Dermatological Stress: High Risk</strong><br>
+                The thermal penalty intensifies sweat gland obstruction (heat rashes) and elevates blood pressure fluctuation risks.
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown("""
+            <div class="clinical-card" style="border-left-color: #2e7d32;">
+                <strong>🩺 Thermal Stress: Low/Moderate Risk</strong><br>
+                Thermal values are stable, reducing heat-induced inflammatory flare-ups.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ==========================================
+    # MULTI-DIMENSIONAL ENVIRONMENTAL METRICS
+    # ==========================================
     st.write("---")
-    st.markdown("### 🗺️ Geospatial Center Scanning Radius")
-    m = folium.Map(location=[st.session_state.lat, st.session_state.lon], zoom_start=13)
-    folium.Circle(
-        location=[st.session_state.lat, st.session_state.lon], 
-        radius=1000, 
-        color="#d97706" if st.session_state.user_tier == "Premium" else "teal", 
-        fill=True, 
-        fill_opacity=0.08
-    ).add_to(m)
-    folium.Marker([st.session_state.lat, st.session_state.lon], popup="Target Scanning Zone").add_to(m)
-    st_folium(m, width=1000, height=380, key="canopy_rx_premium_map_v4")
+    st.markdown("### 🔬 Advanced Multi-Dimensional Exposure Metrics")
+    tab1, tab2, tab3 = st.tabs(["💨 Gaseous Pollutants", "🌱 Ecological & Carbon Metrics", "🔊 Sensory & Physical Stressors"])
+
+    with tab1:
+        st.markdown("#### Live Gaseous Inhalant Concentrations")
+        g_col1, g_col2, g_col3, g_col4 = st.columns(4)
+        with g_col1:
+            st.metric("Nitrogen Dioxide (NO₂)", f"{round(live_no2, 1)} µg/m³", "Safety: 40 µg/m³")
+            st.caption("Drives acute airway swelling and hyper-reactivity.")
+        with g_col2:
+            st.metric("Sulfur Dioxide (SO₂)", f"{round(live_so2, 1)} µg/m³", "Safety: 20 µg/m³")
+            st.caption("Bronchial muscle spasm and localized airway irritant.")
+        with g_col3:
+            st.metric("Carbon Monoxide (CO)", f"{round(live_co, 1)} µg/m³", "Safety: 4000 µg/m³")
+            st.caption("Binds hemoglobin, placing strain on cardiovascular oxygen delivery.")
+        with g_col4:
+            st.metric("Ground-Level Ozone (O₃)", f"{round(live_o3, 1)} µg/m³", "Safety: 100 µg/m³")
+            st.caption("Highly reactive oxidant damaging delicate lung tissues.")
+
+    with tab2:
+        st.markdown(f"#### Ecological Vigor & Carbon Footprint Indices ({climate_zone} Zone)")
+        e_col1, e_col2, e_col3 = st.columns(3)
+        with e_col1:
+            st.metric("Carbon Sequestration Capacity", f"{carbon_offset_value} Tons/Yr", "Canopy CO₂ Offset per km²")
+        with e_col2:
+            st.metric("Normalized Vegetation Index (NDVI)", f"{ndvi_estimate}", "Scale: 0 (Barren) to 1.0 (Lush)")
+        with e_col3:
+            st.metric("Carbon Footprint Estimate", "Heavy" if live_no2 > 30.0 else "Moderate" if live_no2 > 15.0 else "Minimal", carbon_footprint_scale)
+
+    with tab3:
+        st.markdown("#### Physical & Sensory System Stressors")
+        s_col1, s_col2, s_col3 = st.columns(3)
+        with s_col1:
+            st.metric("Acoustic Noise Pollution Proxy", f"{acoustic_noise} dBA", "Sleep Limit: 40 dBA")
+        with s_col2:
+            st.metric("Night Light Pollution Rating", f"Bortle Class {light_pollution}", "Scale: 1 to 9")
+        with s_col3:
+            st.metric("Atmospheric UV Index", f"{live_uv}", "Safety: <3 Low, >8 Very High")
+
+    # ==========================================
+    # CLINICAL PROFILE DROPDOWN TRIGGER
+    # ==========================================
+    if clinical_profile != "None (General Overview)":
+        st.write("---")
+        st.markdown(f"### 🎯 Specialized Risk Assessment: **{clinical_profile}**")
+        
+        if clinical_profile == "Bronchial Asthma / COPD":
+            trigger_score = min(100.0, (live_pm25 * 1.2) + (live_no2 * 0.8) + (live_so2 * 1.5))
+            severity = "High Alert" if trigger_score > 60 else "Moderate Sensitivity" if trigger_score > 30 else "Normal/Stable"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>🫁 Active Bronchial Risk Assessment: <strong>{severity} (Score: {round(trigger_score, 1)}/100)</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> Fine dust is at {round(live_pm25, 1)} µg/m³ with Gaseous NO₂ at {round(live_no2, 1)} µg/m³. These small agents easily pass into lower airways, causing cellular hyper-reactivity.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif clinical_profile == "Atopic Dermatitis & Eczema":
+            skin_risk = max(100 - live_humidity, (apparent_temp - 25) * 3)
+            severity = "High Flare Risk" if skin_risk > 60 else "Mild Flare Risk" if skin_risk > 35 else "Low Risk"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>🩹 Active Eczema & Skin Barrier Assessment: <strong>{severity}</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> Moisture level is {live_humidity}% and UV Index is {live_uv}.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif clinical_profile == "Allergic Rhinitis / Sinusitis":
+            sinus_risk = min(100.0, (live_pm10 * 1.2) + (live_humidity * 0.5))
+            severity = "Highly Reactive" if sinus_risk > 65 else "Mildly Reactive" if sinus_risk > 40 else "Low Congestion Risk"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>👃 Active Sinus & Mucous Membrane Assessment: <strong>{severity}</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> PM10 coarse particulate load is {round(live_pm10, 1)} µg/m³.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif clinical_profile == "Cardiovascular Sensitivity":
+            cardio_risk = min(100.0, (apparent_temp * 1.5) + (live_co * 0.05) + (live_pm25 * 0.5))
+            severity = "Vascular Strain Flag" if cardio_risk > 75 else "Stable Environment"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>❤️ Active Cardiovascular Load Assessment: <strong>{severity}</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> Real-time Heat Stress of {round(apparent_temp, 1)}°C and Carbon Monoxide levels of {round(live_co, 1)} µg/m³.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+
+    st.write("---")
+
+    # SECTION 2: VISUAL GREEN PRESCRIPTIONS (DYNAMICALLY ADAPTED BY CLIMATE ZONE)
+    st.markdown("### 💊 Preventive Medicine: Personalized Green Prescriptions")
+    pres_col1, pres_col2 = st.columns(2)
+    
+    with pres_col1:
+        st.markdown(f"#### 🌳 Botanical Interventions ({diagnostic_radius}m Planting Scope in {climate_zone} Zone)")
+        
+        if climate_zone in ["Tropical", "Subtropical"]:
+            tree_title = "Neem (Azadirachta indica) & Ashoka (Saraca asoca)"
+            tree_desc = "Highly textured foliar surfaces designed to trap fine particulate matter and gaseous toxins in warm humid or dry zones."
+            img_url = "https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=600&q=80"
+        else:  # Temperate / Polar / General High Latitude
+            tree_title = "Silver Birch (Betula pendula) & Red Maple (Acer rubrum)"
+            tree_desc = "Deciduous canopy shields that survive freezing winters, providing maximum cooling shade in summer, and shedding leaves to let winter sunlight pass."
+            img_url = "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80"
+            
+        st.image(img_url, caption=f"Primary Canopy Recommendation: {tree_title}", use_container_width=True)
+        st.write(tree_desc)
+
+    with pres_col2:
+        st.markdown("#### 🏠 Structural & Architectural Adaptations")
+        if apparent_temp > 32.0:
+            struct_title = "High-Albedo Thermal Deflection Membrane"
+            struct_desc = f"With a localized Apparent Temperature of **{round(apparent_temp, 1)}°C**, treating roofs with solar-reflective coating (SRI > 78) blocks severe indoor heat accumulation."
+            struct_img = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80"
+        else:
+            struct_title = "Passive Spatial Cross-Ventilation Arrays"
+            struct_desc = "For cooler climates, prioritize natural air streams to safely purge indoor carbon dioxide and common dust mites without relying on energy-intensive chillers."
+            struct_img = "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80"
+            
+        st.image(struct_img, caption=f"Engineering Recommendation: {struct_title}", use_container_width=True)
+        st.write(struct_desc)
 
 else:
-    # Onboard Loading Screen
-    st.info("👈 Set your target scanning coordinates or search a landmark in the sidebar to populate the analysis dashboards.")
+    # --- VISUAL LANDING HOMEPAGE ---
+    st.info("👈 Enter coordinates, a local address, or click directly on the interactive map in the sidebar to run the diagnostic engine.")
+    
+    welcome_col1, welcome_col2 = st.columns(2)
+    with welcome_col1:
+        st.markdown("### 🧬 The CanopyRx Vision: Healing Spaces, Preventing Illness")
+        st.write(
+            "Environmental medicine maps micro-climate stressors like excessive heat load, gaseous inhalants, "
+            "and acoustic levels to specific physiological vulnerabilities. By using hyper-local tracking (from cities to precise buildings), "
+            "CanopyRx designs green solutions to mitigate spatial health risks."
+        )
+        st.image("https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80", use_container_width=True)
+        
+    with welcome_col2:
+        st.markdown("### 📋 Spatial Scale Setup")
+        st.write(
+            "To target a location:\n"
+            "* **The City Level:** Enter general coordinates (e.g., `40.7128`, `-74.0060` for NYC) and use a **2000m+ analysis radius**.\n"
+            "* **The Building Level:** Input precise coordinates (e.g., `18.9218`, `72.8347`), or type a building name in the search field, and scale the radius down to **50m-150m** to isolate structural exposure."
+        )
