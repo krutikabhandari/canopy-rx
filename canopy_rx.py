@@ -7,12 +7,12 @@ from geopy.exc import GeocoderTimedOut
 
 # Page Configuration - Deep Medical-Teal Theme
 st.set_page_config(
-    page_title="CanopyRx - Environmental Medicine & Personal Care", 
-    page_icon="🩺", 
+    page_title="CanopyRx - Green Engineering & Environmental Health Portal", 
+    page_icon="🌳", 
     layout="wide"
 )
 
-# STRICTOR CSS override to force-disable browser/Streamlit red warning outlines and style custom cards
+# STRICTOR CSS override to force-disable browser/Streamlit warning outlines and style cards
 st.markdown("""
 <style>
     div[data-baseweb="input"] {
@@ -133,7 +133,7 @@ def fetch_environmental_data(latitude, longitude):
             return {
                 "temp": curr["temp_c"],
                 "humidity": curr["humidity"],
-                "uv": curr.get("uv", 0.0), # Default to float
+                "uv": curr.get("uv", 0.0),
                 "wind": curr.get("wind_kph", 10.0),
                 "pm25": aqi.get("pm2_5", 25.0),
                 "pm10": aqi.get("pm10", 40.0),
@@ -213,8 +213,8 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
     st.sidebar.info(f"📍 **Target Coordinates:**\nLat: `{st.session_state.lat:.6f}`\nLon: `{st.session_state.lon:.6f}`")
 
     # App Main Frame
-    st.markdown("# 🩺 CanopyRx: Spatial Diagnostic Framework")
-    st.markdown("##### *Mapping urban micro-climate exposures and ecological footprints to localized pathology risks.*")
+    st.markdown("# 🩺 CanopyRx: Green Engineering & Environmental Health Portal")
+    st.markdown("##### *Quantifying Green Cover Canopy Solutions to Combat Localized Anthropogenic Exposure.*")
     st.write("---")
 
     if st.session_state.engine_active:
@@ -302,10 +302,10 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
         with t1:
             g_col1, g_col2, g_col3 = st.columns(3)
             with g_col1:
-                st.metric("Nitrogen Dioxide (NO₂)", f"{round(env['no2'], 1)} µg/m³")
+                st.metric("Nitrogen Dioxide (NO2)", f"{round(env['no2'], 1)} µg/m³")
                 st.markdown("**[Normal/Safe: <40 µg/m³]**  \n*Impact:* Corrosive traffic gas. High concentrations irritate bronchial linings and worsen allergies.")
             with g_col2:
-                st.metric("Sulfur Dioxide (SO₂)", f"{round(env['so2'], 1)} µg/m³")
+                st.metric("Sulfur Dioxide (SO2)", f"{round(env['so2'], 1)} µg/m³")
                 st.markdown("**[Normal/Safe: <20 µg/m³]**  \n*Impact:* Heavy industrial combustion emission. Triggers respiratory spasms.")
             with g_col3:
                 st.metric("Carbon Monoxide (CO)", f"{round(env['co'], 1)} µg/m³")
@@ -318,7 +318,7 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
                 st.markdown("*Impact:* The total volume of dangerous carbon emissions cleaned annually by the local leafy canopy.")
             with e_col2:
                 st.metric("Normalized Vegetation Index (NDVI)", f"{ndvi_estimate}")
-                st.markdown("**[Normal Target: >0.30]**  \n*Impact:* A satelite-derived score from 0 (barren concrete) to 1.0 (dense jungle) measuring active botanical surface density.")
+                st.markdown("**[Normal Target: >0.30]**  \n*Impact:* A satellite-derived score from 0 (barren concrete) to 1.0 (dense jungle) measuring active botanical surface density.")
                 
         with t3:
             s_col1, s_col2 = st.columns(2)
@@ -346,39 +346,70 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
     
     else:
         # ==========================================
-        # 🧬 NEW CLINICAL EXPLANATORY LANDING PAGE & DIRECTIONS
+        # 🧬 SCIENTIFIC LANDING PAGE & MODULE INSTRUCTIONS
         # ==========================================
         st.markdown("""
-        ### 🧬 Welcome to the CanopyRx Ecological Diagnostics Suite
-        #### *Bridging Spatial Epidemiology, Micro-Climatology, and Clinical Wellness.*
+        ### 🧬 CanopyRx: Green Engineering & Environmental Health Portal
+        #### *An Environmental Engineering & Spatial Medicine Intelligence Suite dedicated to restoring urban green cover and mitigating anthropogenic pathology.*
         
-        Traditional pathology assessment focuses strictly on internal biomarkers. However, modern clinical science reveals that a patient's **allostatic load** (the cumulative physical wear-and-tear of life) is deeply integrated with their immediate environmental exposures. Factors like the **micro-urban heat island effect**, **airborne xenobiotics** (PM2.5, NO₂, CO), **acoustic noise pollution**, and **canopy-deprived micro-climates** trigger sub-clinical inflammatory responses.
+        The concrete expansion of modern cities has stripped away Earth's natural mechanical and biological defense system: **the green canopy**. When green cover is compromised, the buffer between human physiology and localized atmospheric toxicity collapses. This "Canopy Deficit" triggers **Micro-Urban Heat Islands (MUHI)**, suspends dangerous particulate matter, and leaves populations directly exposed to gaseous air contaminants and raw acoustic stress.
         
-        CanopyRx processes live satelite, topographic, and atmospheric data to isolate exposure hazards. By assessing these factors, clinicians and patients can formulate precise, topical, and lifestyle interventions before symptom flare-ups occur.
+        **CanopyRx** bridges the gap between **Environmental Health** and **Green Engineering**. By leveraging real-time spatial atmospheric computing, we quantify localized cellular exposure and prescribe targeted botanical canopy interventions to restore the ecological buffer and protect human physiology.
         
         ---
-        ### 🧭 How to Use This Portal (Step-by-Step Directions):
-        1. **Choose Input Mode:** On the left-hand sidebar, select your input style. Use **Search Address / Landmark** to type any global location, or select **Direct Coordinates** to feed precise GPS coordinates into the system.
-        2. **Map-Click Exploration:** Once the spatial engine is running, you can click on any building, street corner, or courtyard on the interactive map. The engine will instantly recalculate risks for that exact coordinate.
-        3. **Select Your Clinical Profile:** If you suffer from underlying sensitivities (like asthma, eczema, or high blood pressure), choose your match from the **Medical Profile** dropdown menu.
-        4. **Select Exposure Radius:** Adjust the slider to specify your geographic analysis boundary. Keep it small ($50\text{m} - 150\text{m}$) to analyze an individual building, or wider ($1000\text{m} - 5000\text{m}$) for general neighborhood mapping.
-        5. **Recalculate:** Click the red **Recalculate Environmental Report** button to initiate spatial queries and obtain live, customized health plans.
+
+        ### 🧩 The Three Protective Portals
+        To provide 360-degree environmental defense, the CanopyRx suite is organized into three specialized clinical engines:
+        
+        """)
+
+        # Columns describing the 3 core features
+        feat_col1, feat_col2, feat_col3 = st.columns(3)
+        with feat_col1:
+            st.markdown("""
+            #### 🌍 Spatial Canopy & Environmental Health Engine
+            Maps your immediate physical surroundings to evaluate localized health risks.
+            *   **The Stressor:** Low green cover amplifies toxic gases, noise pollution, and micro-urban heat indices.
+            *   **The Intervention:** Analyzes local canopy density (NDVI) and prescribes specific botanical species (like Neem or Birch) to act as biological filters, scrubbing particulates and reducing cardiorespiratory stress.
+            """)
+        with feat_col2:
+            st.markdown("""
+            #### ✈️ Travel Rx: Environmental Acclimatization Planner
+            A pre-travel exposure calculator designed to prevent sudden transition flares.
+            *   **The Stressor:** Crossing different geographic biomes shocks the respiratory system and stresses vascular pathways.
+            *   **The Intervention:** Calculates temperature, UV radiation, and particulate matter deltas between two coordinates to prepare mucosal and cardiorespiratory barriers.
+            """)
+        with feat_col3:
+            st.markdown("""
+            #### 🧴 Skin & Hair Rx: Epithelial Barrier Defense
+            Shields your external physical barriers from direct atmospheric degradation.
+            *   **The Stressor:** Solar UV breaks down structural proteins, low humidity triggers rapid moisture loss, and hard water minerals scale and weaken hair shafts.
+            *   **The Intervention:** Synthesizes local ambient humidity, UV indices, and personal skin types to formulate dynamic, protective topical barrier prescriptions.
+            """)
+
+        st.markdown("""
+        ---
+        ### 🧭 How to Use This Portal:
+        1.  **Run the Spatial Engine:** Choose **Search Address / Landmark** or **Direct Coordinates** in the left sidebar, and click **Recalculate Environmental Report** to analyze your local green canopy impact.
+        2.  **Explore via Map:** On the spatial map, click directly on any street corner, building, or city park to instantly pull up-to-date micro-climate profiles for that exact point.
+        3.  **Plan Travel Transitions:** Switch to the **Travel Rx Planner** using the sidebar dropdown, input your origin and target destinations (using global search or coordinates), and calculate your physical acclimatization forecast.
+        4.  **Formulate Barrier Care:** Select **Skin & Hair Rx** to view how local atmospheric factors impact your skin. Upgrade to Premium to feed in your specific skin type and hair porosity for customized formulations.
         """)
         
         welcome_col1, welcome_col2 = st.columns(2)
         with welcome_col1:
-            st.image("https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80", caption="Urban Micro-Climate Boundary Modeling", use_container_width=True)
+            st.image("https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80", caption="Restoring Urban Forestry to Combat Air and Thermal Stress", use_container_width=True)
         with welcome_col2:
             st.markdown("""
-            #### 📊 Diagnostic Baseline Framework:
-            * **Green Canopy Assessment:** Evaluates vegetation density to estimate active solar radiation filtering.
-            * **Particulate Profiling (PM2.5 / PM10):** Measures the density of microscopic airborne solids capable of bypassing mucus defense structures.
-            * **Acoustic & Light Modeling:** Gauges ambient stress levels that impact the nervous system during restorative hours.
+            #### 🛡️ Green Engineering Metric Frameworks:
+            *   **Green Canopy Coverage:** Recommends targeted urban re-wilding configurations based on regional micro-climates.
+            *   **Particulate Filtration Index:** Tracks fine PM2.5/PM10 dust to predict respiratory load.
+            *   **Ecological Carbon Offsetting:** Estimates real-time carbon processing capacities based on local vegetation densities.
             """)
 
 
 # ==========================================
-# PAGE 2: ✈️ TRAVEL RX PLANNER (UPGRADED)
+# PAGE 2: ✈️ TRAVEL RX PLANNER
 # ==========================================
 elif app_mode == "✈️ Travel Rx Planner":
     st.markdown("# ✈️ Travel Rx: Pre-Travel Environmental Exposure Planner")
@@ -455,7 +486,7 @@ elif app_mode == "✈️ Travel Rx Planner":
                         st.success("✅ **Mild Thermal Shift:** Comfortable transition between regions. Low thermal acclimatization load.")
                 with t_col2:
                     if aqi_delta > 20:
-                        st.warning("⚠️ **Air Quality Degradation:** The target zone has substantially higher particulate concentrations. Pack emergency inhalers and a PM2.5-rated face mask.")
+                        st.warning("⚠️ **Air Quality Degradation:** The target zone contains substantially higher particulate concentrations. Pack emergency inhalers and a PM2.5-rated face mask.")
                     else:
                         st.success("✅ **Air Quality Optimization:** Your destination has clean, well-buffered air, reducing respiratory flare risks.")
             else:
@@ -463,7 +494,7 @@ elif app_mode == "✈️ Travel Rx Planner":
 
 
 # ==========================================
-# PAGE 3: 🧴 SKIN & HAIR RX (WITH DYNAMIC UV CORRECTION & NORMAL BRACKETS)
+# PAGE 3: 🧴 SKIN & HAIR RX
 # ==========================================
 elif app_mode == "🧴 Skin & Hair Rx":
     st.markdown("# 🧴 Skin & Hair Rx: Environmental Barrier Formulations")
@@ -509,7 +540,7 @@ elif app_mode == "🧴 Skin & Hair Rx":
         st.metric("Ambient Particulate Load (PM10)", f"{round(env['pm10'], 1)} µg/m³")
         st.markdown("**[Normal/Safe Limit: <50 µg/m³]**  \n*Impact:* Airborne soot particles that stick to face oil, clogging follicles and accelerating cellular aging.")
 
-    # UV Dynamic Explanation (Addressing why UV might show as 0)
+    # UV Dynamic Explanation
     if float(env["uv"]) == 0.0:
         st.info("💡 **Clinical Note on the '0' UV Index:** This reading occurs naturally because it is nighttime, or because of thick regional cloud cover or winter seasons in polar zones. Sunlight must be physically striking the atmosphere's ozone layer to generate measurable ultraviolet rays.")
 
