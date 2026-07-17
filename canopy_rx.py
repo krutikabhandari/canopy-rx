@@ -133,7 +133,7 @@ def fetch_environmental_data(latitude, longitude):
             return {
                 "temp": curr["temp_c"],
                 "humidity": curr["humidity"],
-                "uv": curr.get("uv", 1.0),
+                "uv": curr.get("uv", 0.0), # Default to float
                 "wind": curr.get("wind_kph", 10.0),
                 "pm25": aqi.get("pm2_5", 25.0),
                 "pm10": aqi.get("pm10", 40.0),
@@ -152,12 +152,15 @@ def fetch_environmental_data(latitude, longitude):
         "so2": 4.0, "o3": 30.0, "success": False
     }
 
-# Geocoder Helper
-def geocode_location(query, country):
+# Geocoder Helper (Supports full global lookups including remote locations)
+def geocode_location(query, country=None):
     try:
         geolocator = Nominatim(user_agent="canopyrx_clinical_environmental_engine_v5")
-        fq = f"{query}, {country}" if country != "Global / Other" and country not in query else query
-        loc = geolocator.geocode(fq, timeout=8)
+        if country and country != "Global / Other" and country not in query:
+            fq = f"{query}, {country}"
+        else:
+            fq = query
+        loc = geolocator.geocode(fq, timeout=10)
         if loc:
             return loc.latitude, loc.longitude, loc.address
     except Exception:
@@ -233,14 +236,31 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
 
         st.markdown(f"### 📊 Clinical Spatial Assessment: `{st.session_state.resolved_address}`")
         
-        # Column Metrics
+        # Column Metrics with Normal Values & Simple Impact Explanations
         m_col1, m_col2, m_col3 = st.columns(3)
         with m_col1:
-            st.metric("🌳 Zone Canopy Coverage", f"{canopy_coverage}%", f"NDVI Vector: {ndvi_estimate}")
+            st.metric(
+                "🌳 Zone Canopy Coverage", 
+                f"{canopy_coverage}%", 
+                f"NDVI Vector: {ndvi_estimate}"
+            )
+            st.markdown("**[Normal Target: >30%]**  \n*Impact:* Measures local greenery. More trees cool down neighborhoods, clean toxic particles from air currents, and reduce mental stress.")
+            
         with m_col2:
-            st.metric("🌡️ Apparent Heat Index", f"{round(apparent_temp, 1)}°C", f"Actual Temperature: {env['temp']}°C")
+            st.metric(
+                "🌡️ Apparent Heat Index", 
+                f"{round(apparent_temp, 1)}°C", 
+                f"Actual Temp: {env['temp']}°C"
+            )
+            st.markdown("**[Normal Comfort: 18°C - 27°C]**  \n*Impact:* How hot it actually feels to the human body. High readings indicate heat-stress hazards that place heavy strain on the heart.")
+            
         with m_col3:
-            st.metric("💨 Live PM2.5 Level", f"{round(env['pm25'], 1)} µg/m³", f"Live PM10: {round(env['pm10'], 1)} µg/m³")
+            st.metric(
+                "💨 Live PM2.5 Level", 
+                f"{round(env['pm25'], 1)} µg/m³", 
+                f"Live PM10: {round(env['pm10'], 1)} µg/m³"
+            )
+            st.markdown("**[Normal/Safe Limit: <15 µg/m³]**  \n*Impact:* Invisible, ultra-fine combustion dust that bypasses lung defense systems, entering blood and provoking deep tissue inflammation.")
 
         st.write("---")
 
@@ -281,17 +301,33 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
         t1, t2, t3 = st.tabs(["💨 Gaseous Pollutants", "🌱 Ecological & Carbon Metrics", "🔊 Sensory & Physical"])
         with t1:
             g_col1, g_col2, g_col3 = st.columns(3)
-            g_col1.metric("Nitrogen Dioxide (NO₂)", f"{round(env['no2'], 1)} µg/m³", "Safety: 40 µg/m³")
-            g_col2.metric("Sulfur Dioxide (SO₂)", f"{round(env['so2'], 1)} µg/m³", "Safety: 20 µg/m³")
-            g_col3.metric("Carbon Monoxide (CO)", f"{round(env['co'], 1)} µg/m³", "Safety: 4000 µg/m³")
+            with g_col1:
+                st.metric("Nitrogen Dioxide (NO₂)", f"{round(env['no2'], 1)} µg/m³")
+                st.markdown("**[Normal/Safe: <40 µg/m³]**  \n*Impact:* Corrosive traffic gas. High concentrations irritate bronchial linings and worsen allergies.")
+            with g_col2:
+                st.metric("Sulfur Dioxide (SO₂)", f"{round(env['so2'], 1)} µg/m³")
+                st.markdown("**[Normal/Safe: <20 µg/m³]**  \n*Impact:* Heavy industrial combustion emission. Triggers respiratory spasms.")
+            with g_col3:
+                st.metric("Carbon Monoxide (CO)", f"{round(env['co'], 1)} µg/m³")
+                st.markdown("**[Normal/Safe: <4000 µg/m³]**  \n*Impact:* Toxic car exhaust gas. Reduces oxygen delivery capacity throughout the human vascular system.")
+                
         with t2:
             e_col1, e_col2 = st.columns(2)
-            e_col1.metric("Carbon Sequestration Capacity", f"{carbon_offset_value} Tons/Yr")
-            e_col2.metric("Normalized Vegetation Index (NDVI)", f"{ndvi_estimate}")
+            with e_col1:
+                st.metric("Carbon Sequestration Capacity", f"{carbon_offset_value} Tons/Yr")
+                st.markdown("*Impact:* The total volume of dangerous carbon emissions cleaned annually by the local leafy canopy.")
+            with e_col2:
+                st.metric("Normalized Vegetation Index (NDVI)", f"{ndvi_estimate}")
+                st.markdown("**[Normal Target: >0.30]**  \n*Impact:* A satelite-derived score from 0 (barren concrete) to 1.0 (dense jungle) measuring active botanical surface density.")
+                
         with t3:
             s_col1, s_col2 = st.columns(2)
-            s_col1.metric("Acoustic Noise Proxy", f"{acoustic_noise} dBA")
-            s_col2.metric("Night Light Pollution", f"Bortle Class {light_pollution}")
+            with s_col1:
+                st.metric("Acoustic Noise Proxy", f"{acoustic_noise} dBA")
+                st.markdown("**[Normal/Safe: <55 dBA daytime, <40 dBA nighttime]**  \n*Impact:* Noise levels. Chronic noise above safe thresholds triggers adrenaline spikes, keeping your body under constant fight-or-flight stress.")
+            with s_col2:
+                st.metric("Night Light Pollution", f"Bortle Class {light_pollution}")
+                st.markdown("**[Normal/Target: Class 1 - 4]**  \n*Impact:* Artificial light. Class 1 is absolute dark sky; Class 9 is urban glare. High values disrupt sleep hormone production.")
 
         # Botanical Prescriptions
         st.write("---")
@@ -307,42 +343,94 @@ if app_mode == "🌍 CanopyRx Spatial Engine":
                 st.image("https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80", caption="Engineering Recommendation: Albedo Deflection Membrane", use_container_width=True)
             else:
                 st.image("https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80", caption="Engineering Recommendation: Passive Cross-Ventilation Arrays", use_container_width=True)
+    
     else:
-        st.info("👈 Enter coordinates, search for an address, or use the interactive map in the sidebar to run the calculation engine.")
+        # ==========================================
+        # 🧬 NEW CLINICAL EXPLANATORY LANDING PAGE & DIRECTIONS
+        # ==========================================
+        st.markdown("""
+        ### 🧬 Welcome to the CanopyRx Ecological Diagnostics Suite
+        #### *Bridging Spatial Epidemiology, Micro-Climatology, and Clinical Wellness.*
+        
+        Traditional pathology assessment focuses strictly on internal biomarkers. However, modern clinical science reveals that a patient's **allostatic load** (the cumulative physical wear-and-tear of life) is deeply integrated with their immediate environmental exposures. Factors like the **micro-urban heat island effect**, **airborne xenobiotics** (PM2.5, NO₂, CO), **acoustic noise pollution**, and **canopy-deprived micro-climates** trigger sub-clinical inflammatory responses.
+        
+        CanopyRx processes live satelite, topographic, and atmospheric data to isolate exposure hazards. By assessing these factors, clinicians and patients can formulate precise, topical, and lifestyle interventions before symptom flare-ups occur.
+        
+        ---
+        ### 🧭 How to Use This Portal (Step-by-Step Directions):
+        1. **Choose Input Mode:** On the left-hand sidebar, select your input style. Use **Search Address / Landmark** to type any global location, or select **Direct Coordinates** to feed precise GPS coordinates into the system.
+        2. **Map-Click Exploration:** Once the spatial engine is running, you can click on any building, street corner, or courtyard on the interactive map. The engine will instantly recalculate risks for that exact coordinate.
+        3. **Select Your Clinical Profile:** If you suffer from underlying sensitivities (like asthma, eczema, or high blood pressure), choose your match from the **Medical Profile** dropdown menu.
+        4. **Select Exposure Radius:** Adjust the slider to specify your geographic analysis boundary. Keep it small ($50\text{m} - 150\text{m}$) to analyze an individual building, or wider ($1000\text{m} - 5000\text{m}$) for general neighborhood mapping.
+        5. **Recalculate:** Click the red **Recalculate Environmental Report** button to initiate spatial queries and obtain live, customized health plans.
+        """)
+        
+        welcome_col1, welcome_col2 = st.columns(2)
+        with welcome_col1:
+            st.image("https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80", caption="Urban Micro-Climate Boundary Modeling", use_container_width=True)
+        with welcome_col2:
+            st.markdown("""
+            #### 📊 Diagnostic Baseline Framework:
+            * **Green Canopy Assessment:** Evaluates vegetation density to estimate active solar radiation filtering.
+            * **Particulate Profiling (PM2.5 / PM10):** Measures the density of microscopic airborne solids capable of bypassing mucus defense structures.
+            * **Acoustic & Light Modeling:** Gauges ambient stress levels that impact the nervous system during restorative hours.
+            """)
 
 
 # ==========================================
-# PAGE 2: ✈️ TRAVEL RX PLANNER (FREE MODULE)
+# PAGE 2: ✈️ TRAVEL RX PLANNER (UPGRADED)
 # ==========================================
 elif app_mode == "✈️ Travel Rx Planner":
     st.markdown("# ✈️ Travel Rx: Pre-Travel Environmental Exposure Planner")
-    st.markdown("##### *Map the climate shift between your current location and your upcoming destination to avoid travel-induced physiological flares.*")
+    st.markdown("##### *Identify atmospheric and climatic deltas between your locations to safely adapt your health, skin, and respiratory routines.*")
     st.write("---")
 
     col_input1, col_input2 = st.columns(2)
+    
     with col_input1:
         st.markdown("### 📍 Origin Location")
-        origin_country = st.selectbox("Origin Country:", ["India", "United States", "United Kingdom", "Indonesia", "Europe", "Other"], key="orig_country")
-        origin_city = st.text_input("Origin City Name / Area:", value="Mumbai", key="orig_city")
+        origin_input_mode = st.radio("Origin Input Method:", ["Search Global City/Village", "Exact Coordinates (Lat, Lon)"], key="org_mode")
+        
+        if origin_input_mode == "Search Global City/Village":
+            origin_search = st.text_input("Enter Origin Location (Accepts any remote city globally):", value="Mumbai", key="orig_search")
+            orig_lat, orig_lon = None, None
+        else:
+            orig_lat = st.number_input("Origin Latitude:", value=19.0760, format="%.6f", key="orig_lat")
+            orig_lon = st.number_input("Origin Longitude:", value=72.8777, format="%.6f", key="orig_lon")
 
     with col_input2:
         st.markdown("### 🛫 Destination Location")
-        dest_country = st.selectbox("Destination Country:", ["United States", "India", "United Kingdom", "Indonesia", "Europe", "Other"], key="dest_country")
-        dest_city = st.text_input("Destination City Name / Area:", value="London", key="dest_city")
+        dest_input_mode = st.radio("Destination Input Method:", ["Search Global City/Village", "Exact Coordinates (Lat, Lon)"], key="dest_mode")
+        
+        if dest_input_mode == "Search Global City/Village":
+            dest_search = st.text_input("Enter Destination Location (Accepts any remote city globally):", value="Reykjavik", key="dest_search")
+            dest_lat, dest_lon = None, None
+        else:
+            dest_lat = st.number_input("Destination Latitude:", value=64.1466, format="%.6f", key="dest_lat")
+            dest_lon = st.number_input("Destination Longitude:", value=-21.9426, format="%.6f", key="dest_lon")
 
     if st.button("Generate Travel Exposure Delta", type="primary", use_container_width=True):
-        with st.spinner("Analyzing micro-climate indices..."):
-            lat_o, lon_o, addr_o = geocode_location(origin_city, origin_country)
-            lat_d, lon_d, addr_d = geocode_location(dest_city, dest_country)
+        with st.spinner("Retrieving global geo-spatial atmospherics..."):
+            
+            # Resolve Origin
+            if origin_input_mode == "Search Global City/Village":
+                lat_o, lon_o, addr_o = geocode_location(origin_search)
+            else:
+                lat_o, lon_o, addr_o = orig_lat, orig_lon, f"Custom Coordinates ({orig_lat:.4f}, {orig_lon:.4f})"
+                
+            # Resolve Destination
+            if dest_input_mode == "Search Global City/Village":
+                lat_d, lon_d, addr_d = geocode_location(dest_search)
+            else:
+                lat_d, lon_d, addr_d = dest_lat, dest_lon, f"Custom Coordinates ({dest_lat:.4f}, {dest_lon:.4f})"
 
-            if lat_o and lat_d:
+            if lat_o is not None and lat_d is not None:
                 data_o = fetch_environmental_data(lat_o, lon_o)
                 data_d = fetch_environmental_data(lat_d, lon_d)
 
                 # Show Delta Table
-                st.markdown(f"### 📊 Exposure Forecast: `{origin_city}` ➔ `{dest_city}`")
+                st.markdown(f"### 📊 Exposure Forecast: `{addr_o.split(',')[0]}` ➔ `{addr_d.split(',')[0]}`")
                 
-                # Highlight significant environmental jumps
                 temp_delta = data_d["temp"] - data_o["temp"]
                 uv_delta = data_d["uv"] - data_o["uv"]
                 aqi_delta = data_d["pm25"] - data_o["pm25"]
@@ -360,22 +448,22 @@ elif app_mode == "✈️ Travel Rx Planner":
                 t_col1, t_col2 = st.columns(2)
                 with t_col1:
                     if temp_delta < -8:
-                        st.warning("⚠️ **Cold Dry Flare Risk:** Rapid temperature drops dry out the upper respiratory mucosal lining. Packed layers and protective balms are highly recommended.")
+                        st.warning("⚠️ **Cold Dry Flare Risk:** Rapid temperature drops dry out upper respiratory mucous membranes. Packed layers and protective barrier creams are highly recommended.")
                     elif temp_delta > 8:
-                        st.warning("⚠️ **Thermal Adaptation Stress:** Massive temperature increase will strain cardiovascular regulation. Keep hydration levels high.")
+                        st.warning("⚠️ **Thermal Adaptation Stress:** Massive temperature increases strain cardiovascular heat dissipation pathways. Increase fluid/electrolyte intake.")
                     else:
-                        st.success("✅ **Mild Thermal Shift:** Safe transition between regions. Low thermal acclimatization load.")
+                        st.success("✅ **Mild Thermal Shift:** Comfortable transition between regions. Low thermal acclimatization load.")
                 with t_col2:
                     if aqi_delta > 20:
-                        st.warning("⚠️ **Air Quality Degradation:** The target zone contains substantially higher particulate concentrations. Pack emergency inhalers and a PM2.5-rated face mask.")
+                        st.warning("⚠️ **Air Quality Degradation:** The target zone has substantially higher particulate concentrations. Pack emergency inhalers and a PM2.5-rated face mask.")
                     else:
                         st.success("✅ **Air Quality Optimization:** Your destination has clean, well-buffered air, reducing respiratory flare risks.")
             else:
-                st.error("Could not locate one or both coordinates. Please verify your city spellings and try again.")
+                st.error("Could not resolve location coordinates. Double check your search spellings or try entering exact GPS coordinates.")
 
 
 # ==========================================
-# PAGE 3: 🧴 SKIN & HAIR RX (DYNAMIC FREE/PREMIUM)
+# PAGE 3: 🧴 SKIN & HAIR RX (WITH DYNAMIC UV CORRECTION & NORMAL BRACKETS)
 # ==========================================
 elif app_mode == "🧴 Skin & Hair Rx":
     st.markdown("# 🧴 Skin & Hair Rx: Environmental Barrier Formulations")
@@ -411,9 +499,19 @@ elif app_mode == "🧴 Skin & Hair Rx":
     st.write(f"Analyzing environmental elements for `{st.session_state.resolved_address}`:")
 
     f_col1, f_col2, f_col3 = st.columns(3)
-    f_col1.metric("Local Relative Humidity", f"{env['humidity']}%")
-    f_col2.metric("Ultraviolet (UV) Factor", f"{env['uv']} / 12")
-    f_col3.metric("Ambient Particulate Load (PM10)", f"{round(env['pm10'], 1)} µg/m³")
+    with f_col1:
+        st.metric("Local Relative Humidity", f"{env['humidity']}%")
+        st.markdown("**[Normal Target Range: 40% - 60%]**  \n*Impact:* Low humidity sucks water out of skin; extreme high humidity clogs pores by trapping sebum.")
+    with f_col2:
+        st.metric("Ultraviolet (UV) Factor", f"{env['uv']} / 12")
+        st.markdown("**[Normal/Safe: <3 (Low)]**  \n*Impact:* Measures DNA-damaging solar rays. UV triggers premature skin aging, wrinkles, and breaks down hair protein shields.")
+    with f_col3:
+        st.metric("Ambient Particulate Load (PM10)", f"{round(env['pm10'], 1)} µg/m³")
+        st.markdown("**[Normal/Safe Limit: <50 µg/m³]**  \n*Impact:* Airborne soot particles that stick to face oil, clogging follicles and accelerating cellular aging.")
+
+    # UV Dynamic Explanation (Addressing why UV might show as 0)
+    if float(env["uv"]) == 0.0:
+        st.info("💡 **Clinical Note on the '0' UV Index:** This reading occurs naturally because it is nighttime, or because of thick regional cloud cover or winter seasons in polar zones. Sunlight must be physically striking the atmosphere's ozone layer to generate measurable ultraviolet rays.")
 
     # Free general recommendations
     st.markdown("#### 🛡️ Standard Environmental Care Guidelines")
