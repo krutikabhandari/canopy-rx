@@ -11,10 +11,9 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom Premium Styling
+# Premium Custom Styling (Restored)
 st.markdown("""
 <style>
-    /* Free Tier Styles */
     .free-badge {
         background-color: #e0f2fe;
         color: #0369a1;
@@ -22,16 +21,6 @@ st.markdown("""
         border-radius: 4px;
         font-weight: bold;
         font-size: 12px;
-    }
-    .metric-explainer {
-        font-size: 13px;
-        color: #4b5563;
-        background-color: #f9fafb;
-        padding: 8px 12px;
-        border-radius: 6px;
-        border-left: 3px solid #9ca3af;
-        margin-top: 5px;
-        margin-bottom: 12px;
     }
     .normal-value-badge {
         background-color: #f0fdf4;
@@ -41,8 +30,6 @@ st.markdown("""
         font-size: 11px;
         font-weight: bold;
     }
-    
-    /* Paid/Premium Tier Styles */
     .premium-badge {
         background-color: #fef3c7;
         color: #b45309;
@@ -77,35 +64,24 @@ st.markdown("""
 
 # --- 2. INITIALIZE GLOBAL STATE ---
 if "lat" not in st.session_state:
-    st.session_state.lat = 19.0760  # Default: Mumbai
+    st.session_state.lat = None
 if "lon" not in st.session_state:
-    st.session_state.lon = 72.8777  # Default: Mumbai
+    st.session_state.lon = None
 if "resolved_address" not in st.session_state:
-    st.session_state.resolved_address = "Mumbai, Maharashtra, India"
-if "last_query" not in st.session_state:
-    st.session_state.last_query = ""
-if "last_country" not in st.session_state:
-    st.session_state.last_country = ""
+    st.session_state.resolved_address = ""
 if "engine_active" not in st.session_state:
-    st.session_state.engine_active = True
+    st.session_state.engine_active = False
 if "user_tier" not in st.session_state:
     st.session_state.user_tier = "Free"
 
-def reset_engine():
-    st.session_state.engine_active = False
-
-def activate_engine():
-    st.session_state.engine_active = True
-
 # --- 3. LIVE API DATA FETCH ENGINE ---
 def fetch_environmental_data(latitude, longitude):
-    """Fetches real-time environmental data directly from Open-Meteo APIs"""
     data = {
         "temp": 27.0, "humidity": 70.0, "uv": 5.0,
         "pm25": 35.0, "pm10": 50.0, "no2": 20.0, "co": 380.0, "o3": 40.0
     }
     try:
-        # Fetch weather metrics
+        # Weather
         weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m,relative_humidity_2m,uv_index"
         w_res = requests.get(weather_url, timeout=5).json()
         if "current" in w_res:
@@ -113,7 +89,7 @@ def fetch_environmental_data(latitude, longitude):
             data["humidity"] = w_res["current"].get("relative_humidity_2m", data["humidity"])
             data["uv"] = w_res["current"].get("uv_index", data["uv"])
 
-        # Fetch air quality metrics
+        # Air Quality
         aqi_url = f"https://air-quality-api.open-meteo.com/v1/air-quality?latitude={latitude}&longitude={longitude}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,ozone"
         a_res = requests.get(aqi_url, timeout=5).json()
         if "current" in a_res:
@@ -131,7 +107,7 @@ st.markdown("# 🩺 CanopyRx: Environmental Medicine & Safe-Travel Portal")
 st.markdown("##### *Smart-spatial diagnostics mapping local pathology risks, decoded micro-climate metrics, and premium personalized clinical defense plans.*")
 st.write("---")
 
-# --- 5. SIDEBAR GEOGRAPHIC & CONTROLS ---
+# --- 5. SIDEBAR CONTROLS ---
 st.sidebar.markdown("### 🔐 User Access Level")
 auth_mode = st.sidebar.radio("Select Account Tier:", ["Public Access (Free)", "Subscribed Patient (Premium)"])
 st.session_state.user_tier = "Premium" if "Premium" in auth_mode else "Free"
@@ -139,113 +115,114 @@ st.session_state.user_tier = "Premium" if "Premium" in auth_mode else "Free"
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🗺️ Geographic Tracking")
 
-# --- AIRTIGHT NATIVE IFRAME-SAFE GEOLOCATION COMPONENT ---
-# We catch URL parameters to securely pass location data back from the browser window layer to Python
-query_params = st.query_transform() if hasattr(st, "query_transform") else st.coerced_query_params if hasattr(st, "coerced_query_params") else st.query_params
-
-if "gps_lat" in query_params and "gps_lon" in query_params:
-    try:
-        st.session_state.lat = float(query_params["gps_lat"][0] if isinstance(query_params["gps_lat"], list) else query_params["gps_lat"])
-        st.session_state.lon = float(query_params["gps_lon"][0] if isinstance(query_params["gps_lon"], list) else query_params["gps_lon"])
-        st.session_state.engine_active = True
-        
-        # Clear out URL bars cleanly so it doesn't infinite loop on reloads
-        if hasattr(st, "query_params"):
-            st.query_params.clear()
-    except Exception:
-        pass
-
-# This component breaks out of Streamlit's iframe constraint to fetch native device data
-iframe_breaker_html = """
-<div style="display: flex; justify-content: center; align-items: center; width: 100%;">
-    <button onclick="breakoutAndLocate()" style="
+# JavaScript Geolocation Injector Box
+st.sidebar.markdown("#### 📍 Live Satellite Tracking")
+js_geo_code = """
+<div style="text-align: center;">
+    <button onclick="getLocation()" style="
         width: 100%; 
         background-color: #ff4b4b; 
         color: white; 
         border: none; 
-        padding: 12px; 
+        padding: 10px; 
         border-radius: 8px; 
         cursor: pointer;
         font-weight: bold;
-        font-family: sans-serif;
         font-size: 14px;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.15);
-        transition: 0.3s;
     ">📌 Detect My Live Location</button>
 </div>
 
 <script>
-    function breakoutAndLocate() {
-        if (navigator.geolocation) {
-            // Request coordinates from the top window layer, bypassing the inner iframe block
-            window.parent.navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    
-                    // Push coordinates to the main browser window URL parameters
-                    const currentUrl = new URL(window.parent.location.href);
-                    currentUrl.searchParams.set("gps_lat", lat);
-                    currentUrl.searchParams.set("gps_lon", lon);
-                    
-                    // Reload the host container frame with the new parameters assigned
-                    window.parent.location.href = currentUrl.toString();
-                },
-                function(error) {
-                    // Failover fallback if parent frame is completely locked out
-                    navigator.geolocation.getCurrentPosition(function(pos) {
-                        const currentUrl = new URL(window.parent.location.href);
-                        currentUrl.searchParams.set("gps_lat", pos.coords.latitude);
-                        currentUrl.searchParams.set("gps_lon", pos.coords.longitude);
-                        window.parent.location.href = currentUrl.toString();
-                    }, function(err) {
-                        alert("Location Access Blocked. Please check your browser address bar privacy locks.");
-                    });
-                },
-                { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
-            );
-        } else {
-            alert("Geolocation services are not supported by this browser setup.");
-        }
+function getLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+    } else {
+        alert("Geolocation is not supported by this browser.");
     }
+}
+
+function showPosition(position) {
+    // Send coordinates via window messaging directly to the main Streamlit interface
+    var coords = position.coords.latitude + "," + position.coords.longitude;
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: coords
+    }, '*');
+}
+
+function showError(error) {
+    switch(error.code) {
+        case error.PERMISSION_DENIED:
+            alert("User denied the request for Geolocation. Check your site permissions lock in the URL bar.");
+            break;
+        case error.POSITION_UNAVAILABLE:
+            alert("Location information is unavailable.");
+            break;
+        case error.TIMEOUT:
+            alert("The request to get user location timed out.");
+            break;
+        case error.UNKNOWN_ERROR:
+            alert("An unknown error occurred.");
+            break;
+    }
+}
 </script>
 """
 
-with st.sidebar:
-    import streamlit.components.v1 as components
-    components.html(iframe_breaker_html, height=48)
+import streamlit.components.v1 as components
+# Render the button inside the sidebar
+loc_receiver = components.html(js_geo_code, height=50)
+
+# Check if browser returned location values via the component channel
+if loc_receiver:
+    try:
+        raw_coords = str(loc_receiver)
+        if "," in raw_coords:
+            lat_val, lon_val = map(float, raw_coords.split(","))
+            st.session_state.lat = lat_val
+            st.session_state.lon = lon_val
+            st.session_state.engine_active = True
+    except Exception:
+        pass
 
 st.sidebar.markdown("---")
 
-# Manual Override Options
-input_mode = st.sidebar.radio("Manual Location Overrides:", ["Search Address / Landmark", "Direct Coordinates"], on_change=reset_engine)
+# Manual Fallback Input Fields
+input_mode = st.sidebar.radio("Manual Location Overrides:", ["Search Address / Landmark", "Direct Coordinates"])
 resolved_by_coords = False
 
 if input_mode == "Search Address / Landmark":
-    country_option = st.sidebar.selectbox("Region / Country:", ["India", "United States", "United Kingdom", "Global / Other"], on_change=reset_engine)
-    search_query = st.sidebar.text_input("Enter City, Pincode, or Area Name:", placeholder="e.g., Kurla West Mumbai...", on_change=reset_engine)
+    country_option = st.sidebar.selectbox("Region / Country:", ["India", "United States", "United Kingdom", "Global / Other"])
+    search_query = st.sidebar.text_input("Enter City, Pincode, or Area Name:", placeholder="e.g., Kurla West Mumbai...")
 
-    if search_query and (search_query != st.session_state.last_query or country_option != st.session_state.last_country):
-        try:
-            geolocator = Nominatim(user_agent="canopy_rx_platform_engine")
-            final_q = f"{search_query}, {country_option}" if country_option != "Global / Other" else search_query
-            loc_data = geolocator.geocode(final_q, timeout=5)
-            if loc_data:
-                st.session_state.lat, st.session_state.lon = loc_data.latitude, loc_data.longitude
-                st.session_state.resolved_address = loc_data.address
-                st.session_state.last_query, st.session_state.last_country = search_query, country_option
-                st.session_state.engine_active = True
-        except Exception:
-            st.sidebar.warning("Geocoder busy, please try clicking re-calculate.")
+    if st.sidebar.button("Search & Analyze Location", use_container_width=True):
+        if search_query:
+            try:
+                geolocator = Nominatim(user_agent="canopy_rx_platform_engine")
+                final_q = f"{search_query}, {country_option}" if country_option != "Global / Other" else search_query
+                loc_data = geolocator.geocode(final_q, timeout=5)
+                if loc_data:
+                    st.session_state.lat = loc_data.latitude
+                    st.session_state.lon = loc_data.longitude
+                    st.session_state.resolved_address = loc_data.address
+                    st.session_state.engine_active = True
+                else:
+                    st.sidebar.error("Location not found. Please try a different query.")
+            except Exception:
+                st.sidebar.warning("Geocoding service busy. Click search again.")
 else:
-    coord_lat = st.sidebar.number_input("Latitude:", value=float(st.session_state.lat), format="%.4f", on_change=reset_engine)
-    coord_lon = st.sidebar.number_input("Longitude:", value=float(st.session_state.lon), format="%.4f", on_change=reset_engine)
+    default_lat = float(st.session_state.lat) if st.session_state.lat else 19.0760
+    default_lon = float(st.session_state.lon) if st.session_state.lon else 72.8777
+    coord_lat = st.sidebar.number_input("Latitude:", value=default_lat, format="%.4f")
+    coord_lon = st.sidebar.number_input("Longitude:", value=default_lon, format="%.4f")
     if st.sidebar.button("Apply Coordinates", use_container_width=True):
-        st.session_state.lat, st.session_state.lon = coord_lat, coord_lon
+        st.session_state.lat = coord_lat
+        st.session_state.lon = coord_lon
         resolved_by_coords = True
         st.session_state.engine_active = True
 
-if resolved_by_coords or ("gps_lat" in query_params and st.session_state.resolved_address == "Mumbai, Maharashtra, India"):
+# Process Geolocation Reverse Addresses safely
+if st.session_state.engine_active and not st.session_state.resolved_address:
     try:
         geolocator = Nominatim(user_agent="canopy_rx_platform_engine")
         resolved_loc = geolocator.reverse(f"{st.session_state.lat}, {st.session_state.lon}", timeout=3)
@@ -253,17 +230,15 @@ if resolved_by_coords or ("gps_lat" in query_params and st.session_state.resolve
     except Exception:
         st.session_state.resolved_address = f"Coordinates: {st.session_state.lat}, {st.session_state.lon}"
 
-st.sidebar.button("Recalculate Diagnostics", type="primary", on_click=activate_engine, use_container_width=True)
-
-# --- 6. CORE CALCULATION RENDER LAYER ---
-if st.session_state.engine_active:
+# --- 6. MAIN CONTENT RENDERING LAYER ---
+if st.session_state.engine_active and st.session_state.lat and st.session_state.lon:
     env_metrics = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     
     st.markdown(f"### 📍 Target Geo-Analysis: `{st.session_state.resolved_address}`")
     st.write(f"Coordinates processed: `{st.session_state.lat:.4f}, {st.session_state.lon:.4f}`")
 
     # =========================================================================
-    # 🌍 TIER 1: FREE PUBLIC TRAVEL & BIO-CARE ADVISORY
+    # 🌍 TIER 1: FREE PUBLIC TRAVEL & BIO-CARE ADVICE
     # =========================================================================
     st.markdown("### <span class='free-badge'>FREE PUBLIC ACCESS</span> ✈️ Eco-Travel & Bio-Care Advisory", unsafe_allow_html=True)
     
