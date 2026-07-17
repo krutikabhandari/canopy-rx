@@ -156,39 +156,45 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
     lon = st.session_state.lon
     resolved_address = st.session_state.resolved_address
 
-    # LIVE FETCH 1: Weather (Temperature & Humidity) from Open-Meteo API
-    weather_url = "https://api.open-meteo.com/v1/forecast"
-    weather_params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": "temperature_2m,relative_humidity_2m",
-        "timezone": "auto"
-    }
+    # --- LIVE API-BASED REAL-TIME DIAGNOSTIC COMPUTATION ---
+if st.session_state.engine_active and st.session_state.lat and st.session_state.lon:
+    lat = st.session_state.lat
+    lon = st.session_state.lon
+    resolved_address = st.session_state.resolved_address
+
+    # Replace 'YOUR_API_KEY' with the key you copied from WeatherAPI.com
+    API_KEY = "1a7d7e605314430bb7b81210261707"  
     
-    # LIVE FETCH 2: Air Quality (Real-time PM2.5 & PM10)
-    aq_url = "https://air-quality-api.open-meteo.com/v1/air-quality"
-    aq_params = {
-        "latitude": lat,
-        "longitude": lon,
-        "current": "pm2_5,pm10",
-        "timezone": "auto"
+    # WeatherAPI can take coordinates directly in 'latitude,longitude' format
+    query_location = f"{lat},{lon}"
+    
+    weather_url = "https://api.weatherapi.com/v1/current.json"
+    weather_params = {
+        "key": API_KEY,
+        "q": query_location,
+        "aqi": "yes"  # Requests both weather and air quality data in one call!
     }
 
     try:
         with st.spinner("Retrieving live environmental sensor feeds..."):
-            weather_res = requests.get(weather_url, params=weather_params, timeout=10).json()
-            aq_res = requests.get(aq_url, params=aq_params, timeout=10).json()
+            response = requests.get(weather_url, params=weather_params, timeout=10)
             
-            # This will show us the actual API error in the app if it fails!
-            if "error" in weather_res:
-                st.error(f"Weather API Error: {weather_res.get('reason')}")
-            if "error" in aq_res:
-                st.error(f"Air Quality API Error: {aq_res.get('reason')}")
+            # If the API key is wrong or server is down, show the error
+            if response.status_code != 200:
+                error_data = response.json()
+                st.error(f"WeatherAPI Error: {error_data['error']['message']}")
+                raise ValueError("API call failed")
+                
+            weather_res = response.json()
 
-            live_temp = weather_res["current"]["temperature_2m"]
-            live_humidity = weather_res["current"]["relative_humidity_2m"]
-            live_pm25 = aq_res["current"]["pm2_5"]
-            live_pm10 = aq_res["current"]["pm10"]
+            # Parse the weather parameters
+            live_temp = weather_res["current"]["temp_c"]
+            live_humidity = weather_res["current"]["humidity"]
+            
+            # Parse the air quality parameters
+            live_pm25 = weather_res["current"]["air_quality"]["pm2_5"]
+            live_pm10 = weather_res["current"]["air_quality"]["pm10"]
+
     except Exception as e:
         st.error(f"Failed to fetch live API data: {e}. Reverting to baseline simulation.")
         live_temp, live_humidity, live_pm25, live_pm10 = 30.0, 50.0, 25.0, 40.0
