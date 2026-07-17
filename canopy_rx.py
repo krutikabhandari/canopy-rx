@@ -44,16 +44,23 @@ st.markdown("""
         margin-bottom: 12px;
         font-size: 14px;
     }
+    .targeted-card {
+        background-color: #fbf8f3;
+        border-left: 5px solid #d97706;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Initialize Session State
-if "lat" not in st.session_state:
-    st.session_state.lat = None
-if "lon" not in st.session_state:
-    st.session_state.lon = None
+if "lat" not in st.session_state or st.session_state.lat is None:
+    st.session_state.lat = 19.0760  # Default to Mumbai Latitude
+if "lon" not in st.session_state or st.session_state.lon is None:
+    st.session_state.lon = 72.8777  # Default to Mumbai Longitude
 if "resolved_address" not in st.session_state:
-    st.session_state.resolved_address = None
+    st.session_state.resolved_address = "Mumbai, Maharashtra, India"
 if "last_query" not in st.session_state:
     st.session_state.last_query = ""
 if "last_country" not in st.session_state:
@@ -69,86 +76,137 @@ def reset_engine():
 
 # --- CLINICAL PORTAL HEADER ---
 st.markdown("# 🩺 CanopyRx: Clinical Micro-Climate & Preventive Environmental Medicine Portal")
-st.markdown("##### *An advanced spatial diagnostic framework mapping urban micro-climate exposures to localized pathology risks.*")
+st.markdown("##### *An advanced spatial diagnostic framework mapping urban micro-climate exposures and ecological footprints to localized pathology risks.*")
 st.write("---")
 
-# --- SIDEBAR: ULTRA-COMPACT & NO-SCROLL ---
+# --- SIDEBAR: INPUTS & CLINICAL DROPDOWN ---
 st.sidebar.markdown("### 📋 Diagnostic Inputs")
 
-# 1. Country Selection
-country_option = st.sidebar.selectbox(
-    "Region / Country:",
-    ["India", "Indonesia", "Philippines", "United States", "United Kingdom", "Global / Other"],
+# Choose input methodology
+input_mode = st.sidebar.radio(
+    "Location Input Method:",
+    ["Search Address / Landmark", "Direct Coordinates"],
     on_change=reset_engine
 )
 
-# 2. Address/Pincode Text Input
-search_query = st.sidebar.text_input(
-    "PIN Code, ZIP, or Local Address:", 
-    placeholder="e.g., 422013, 10001...",
-    on_change=reset_engine
-)
+resolved_by_coords = False
 
-# Geocoding function to convert search queries into lat/lon coordinates
-def geocode_address(query, country):
+if input_mode == "Search Address / Landmark":
+    # 1. Country Selection
+    country_option = st.sidebar.selectbox(
+        "Region / Country:",
+        ["India", "United States", "United Kingdom", "Indonesia", "Philippines", "Global / Other"],
+        on_change=reset_engine
+    )
+
+    # 2. Address/Pincode/Building Text Input
+    search_query = st.sidebar.text_input(
+        "Enter City, Pincode, or Specific Building:", 
+        placeholder="e.g., Central Park NY, or 400001...",
+        on_change=reset_engine
+    )
+
+    # Geocoding function to convert search queries into lat/lon coordinates
+    def geocode_address(query, country):
+        try:
+            geolocator = Nominatim(user_agent="canopyrx_clinical_environmental_engine")
+            final_query = query
+            if country != "Global / Other" and country not in query:
+                final_query = f"{query}, {country}"
+                
+            location_data = geolocator.geocode(final_query, timeout=10)
+            if location_data:
+                return location_data.latitude, location_data.longitude, location_data.address
+            return None, None, None
+        except (GeocoderTimedOut, Exception):
+            return None, None, None
+
+    # Run search instantly when input changes
+    if search_query and (search_query != st.session_state.last_query or country_option != st.session_state.last_country):
+        with st.sidebar.spinner("Resolving location details..."):
+            lat, lon, addr = geocode_address(search_query, country_option)
+            if lat and lon:
+                st.session_state.lat = lat
+                st.session_state.lon = lon
+                st.session_state.resolved_address = addr
+                st.session_state.last_query = search_query
+                st.session_state.last_country = country_option
+                st.session_state.engine_active = True  # Auto-activate on successful text search
+            else:
+                st.sidebar.warning("⚠️ Location not found. Try a broader term or check coordinates.")
+
+else:
+    # Direct Coordinate Entry
+    st.sidebar.markdown("#### Enter Precise Coordinates")
+    coord_lat = st.sidebar.number_input(
+        "Latitude (Y):", 
+        value=float(st.session_state.lat), 
+        format="%.6f", 
+        step=0.0001,
+        on_change=reset_engine
+    )
+    coord_lon = st.sidebar.number_input(
+        "Longitude (X):", 
+        value=float(st.session_state.lon), 
+        format="%.6f", 
+        step=0.0001,
+        on_change=reset_engine
+    )
+    
+    if st.sidebar.button("Apply Coordinates", use_container_width=True):
+        st.session_state.lat = coord_lat
+        st.session_state.lon = coord_lon
+        resolved_by_coords = True
+        st.session_state.engine_active = True
+
+# Reverse geocoding to find address if user changed via map or coords directly
+if resolved_by_coords or ("last_lat" in st.session_state and (st.session_state.lat != st.session_state.get("last_lat") or st.session_state.lon != st.session_state.get("last_lon"))):
     try:
         geolocator = Nominatim(user_agent="canopyrx_clinical_environmental_engine")
-        final_query = query
-        if country != "Global / Other" and country not in query:
-            final_query = f"{query}, {country}"
-            
-        location_data = geolocator.geocode(final_query, timeout=10)
-        if location_data:
-            return location_data.latitude, location_data.longitude, location_data.address
-        return None, None, None
-    except (GeocoderTimedOut, Exception):
-        return None, None, None
-
-# Run search instantly when input changes
-if search_query and (search_query != st.session_state.last_query or country_option != st.session_state.last_country):
-    with st.sidebar.spinner("Resolving coordinates..."):
-        lat, lon, addr = geocode_address(search_query, country_option)
-        if lat and lon:
-            st.session_state.lat = lat
-            st.session_state.lon = lon
-            st.session_state.resolved_address = addr
-            st.session_state.last_query = search_query
-            st.session_state.last_country = country_option
-            st.session_state.engine_active = False 
+        resolved_loc = geolocator.reverse(f"{st.session_state.lat}, {st.session_state.lon}", timeout=5)
+        if resolved_loc:
+            st.session_state.resolved_address = resolved_loc.address
         else:
-            st.session_state.lat = None
-            st.session_state.lon = None
-            st.session_state.resolved_address = None
-            st.session_state.engine_active = False
+            st.session_state.resolved_address = f"Coordinates: {st.session_state.lat:.4f}, {st.session_state.lon:.4f}"
+    except Exception:
+        st.session_state.resolved_address = f"Coordinates: {st.session_state.lat:.4f}, {st.session_state.lon:.4f}"
+    st.session_state.last_lat = st.session_state.lat
+    st.session_state.last_lon = st.session_state.lon
 
-# 3. DIRECT Action Button (No scrolling required!)
-if st.session_state.lat and st.session_state.lon:
-    display_address = st.session_state.resolved_address
-    if len(display_address) > 35:
-        display_address = display_address[:32] + "..."
-    
-    st.sidebar.markdown(f"📍 **Found:** `{display_address}`")
-    
-    st.sidebar.button(
-        "Generate Environmental Health Report", 
-        type="primary", 
-        on_click=activate_engine,
-        use_container_width=True
-    )
-else:
-    if search_query:
-        st.sidebar.warning("⚠️ Location not found. Try adjusting input.")
+# Dropdown to filter specific clinical condition risks
+st.sidebar.markdown("---")
+clinical_profile = st.sidebar.selectbox(
+    "Select Medical Profile (Optional):",
+    [
+        "None (General Overview)", 
+        "Bronchial Asthma / COPD", 
+        "Atopic Dermatitis & Eczema", 
+        "Allergic Rhinitis / Sinusitis", 
+        "Cardiovascular Sensitivity"
+    ],
+    help="Select a specific condition to run a deep-dive micro-climate risk assessment."
+)
 
-# 4. Optional Boundary Slider
+# Optional Boundary Slider
 st.sidebar.markdown("---")
 diagnostic_radius = st.sidebar.slider(
     "Analysis Radius (meters):",
-    min_value=100,
-    max_value=2000,
+    min_value=50,
+    max_value=5000,
     value=400, 
     step=50,
-    help="Define the geographic boundary for environmental exposure analysis."
+    help="Define the geographic boundary. Use 50m-200m for an individual building, and 2000m+ for general city-wide mapping."
 )
+
+st.sidebar.button(
+    "Recalculate Environmental Report", 
+    type="primary", 
+    on_click=activate_engine,
+    use_container_width=True
+)
+
+# Display Current Active Location Status
+st.sidebar.info(f"📍 **Target Coordinates:**\nLat: `{st.session_state.lat:.6f}`\nLon: `{st.session_state.lon:.6f}`")
 
 # --- LIVE API-BASED REAL-TIME DIAGNOSTIC COMPUTATION ---
 if st.session_state.engine_active and st.session_state.lat and st.session_state.lon:
@@ -156,30 +214,21 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
     lon = st.session_state.lon
     resolved_address = st.session_state.resolved_address
 
-    # --- LIVE API-BASED REAL-TIME DIAGNOSTIC COMPUTATION ---
-if st.session_state.engine_active and st.session_state.lat and st.session_state.lon:
-    lat = st.session_state.lat
-    lon = st.session_state.lon
-    resolved_address = st.session_state.resolved_address
-
-    # Replace 'YOUR_API_KEY' with the key you copied from WeatherAPI.com
+    # PASTE YOUR WEATHERAPI.COM KEY HERE:
     API_KEY = "1a7d7e605314430bb7b81210261707"  
     
-    # WeatherAPI can take coordinates directly in 'latitude,longitude' format
     query_location = f"{lat},{lon}"
-    
     weather_url = "https://api.weatherapi.com/v1/current.json"
     weather_params = {
         "key": API_KEY,
         "q": query_location,
-        "aqi": "yes"  # Requests both weather and air quality data in one call!
+        "aqi": "yes"
     }
 
     try:
         with st.spinner("Retrieving live environmental sensor feeds..."):
             response = requests.get(weather_url, params=weather_params, timeout=10)
             
-            # If the API key is wrong or server is down, show the error
             if response.status_code != 200:
                 error_data = response.json()
                 st.error(f"WeatherAPI Error: {error_data['error']['message']}")
@@ -187,74 +236,122 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
                 
             weather_res = response.json()
 
-            # Parse the weather parameters
+            # Parse live weather metrics
             live_temp = weather_res["current"]["temp_c"]
             live_humidity = weather_res["current"]["humidity"]
+            live_uv = weather_res["current"].get("uv", 1.0)
+            live_wind = weather_res["current"].get("wind_kph", 10.0)
             
-            # Parse the air quality parameters
-            live_pm25 = weather_res["current"]["air_quality"]["pm2_5"]
-            live_pm10 = weather_res["current"]["air_quality"]["pm10"]
+            # Parse Air Quality Metrics
+            aqi_data = weather_res["current"].get("air_quality", {})
+            live_pm25 = aqi_data.get("pm2_5", 25.0)
+            live_pm10 = aqi_data.get("pm10", 40.0)
+            live_co = aqi_data.get("co", 400.0)
+            live_no2 = aqi_data.get("no2", 15.0)
+            live_o3 = aqi_data.get("o3", 35.0)
+            live_so2 = aqi_data.get("so2", 5.0)
 
     except Exception as e:
         st.error(f"Failed to fetch live API data: {e}. Reverting to baseline simulation.")
-        live_temp, live_humidity, live_pm25, live_pm10 = 30.0, 50.0, 25.0, 40.0
-    # SCIENTIFIC GEOGRAPHIC INTELLIGENCE (Canopy Scoring)
-    # Check if location corresponds to Mumbai or Nashik coordinates
-    is_mumbai = (18.8 <= lat <= 19.3) and (72.7 <= lon <= 73.1)
-    is_nashik = (19.8 <= lat <= 20.2) and (73.5 <= lon <= 74.0)
-    
-    if is_mumbai:
-        canopy_coverage = 12.0  # Real-world concrete dense urban index
-    elif is_nashik:
-        canopy_coverage = 28.0  # Greener open high-altitude tableland index
-    else:
-        canopy_coverage = 20.0  # Standard fallback
+        live_temp, live_humidity, live_uv, live_wind = 28.0, 60.0, 5.0, 12.0
+        live_pm25, live_pm10, live_co, live_no2, live_o3, live_so2 = 25.0, 40.0, 350.0, 12.0, 30.0, 4.0
 
-    # Apparent Temperature / Heat Index Calculation (Physiologically accurate)
-    # How high humidity prevents standard cooling sweat evaporation
+    # ==========================================
+    # 🌍 UNIVERSAL ENVIRONMENTAL INTELLIGENCE SCORING ENGINE
+    # ==========================================
+    
+    # 1. Algorithmic Canopy & Vegetation Density (NDVI) Estimation
+    # High PM2.5, high temperatures, and low humidity strongly indicate a dense, concrete urban-heat-island structure.
+    # We dynamically calculate the canopy percentage based on these physical ecological metrics.
+    thermal_loading = max(0.0, live_temp - 22.0)
+    humidity_factor = max(0.1, live_humidity / 100.0)
+    pollution_load = min(100.0, (live_pm25 + live_pm10) / 2.0)
+    
+    # Base canopy baseline shifts down in highly concrete (polluted/hot/dry) environments
+    calculated_canopy = 45.0 - (pollution_load * 0.25) - (thermal_loading * 0.4) + (humidity_factor * 10.0)
+    canopy_coverage = round(min(85.0, max(4.0, calculated_canopy)), 1)
+    
+    # NDVI scale derived from calculated foliage presence
+    ndvi_estimate = round(0.08 + (canopy_coverage / 100.0) * 0.78, 2)
+
+    # 2. Universal Acoustic Noise Exposure Proxy (dBA)
+    # Background noise increases near industrial/busy transit areas (characterized by high gaseous pollutants like NO2 and CO).
+    ambient_noise_calc = 45.0 + (min(60.0, live_no2) * 0.4) + (min(1000.0, live_co) * 0.02)
+    acoustic_noise = round(min(88.0, max(35.0, ambient_noise_calc)), 1)
+
+    # 3. Night Light Pollution Index (Bortle Scale)
+    # Densely built high-emission metropolitan zones have heavily saturated night skies (correlated to high CO/NO2 markers).
+    bortle_calc = 2.0 + (min(80.0, live_no2) * 0.08)
+    light_pollution = int(min(9, max(1, round(bortle_calc))))
+
+    # 4. Planetary Carbon Sequestration Capacity
+    # Broadly modeled as ~1.25 metric tons of CO2 offset annually per 1% canopy coverage per square kilometer.
+    carbon_offset_value = round(canopy_coverage * 1.25, 2)
+
+    # 5. Global Carbon Footprint Classification
+    if live_no2 > 30.0 or live_co > 600.0:
+        carbon_footprint_scale = "Very High (Dense Carbon-Emitting Core)"
+    elif live_no2 > 15.0 or live_co > 350.0:
+        carbon_footprint_scale = "Moderate (Suburban/Developed Footprint)"
+    else:
+        carbon_footprint_scale = "Low-Impact (Rural or Well-Buffered Ecosystem)"
+
+    # 6. Global Latitudinal Climate Zone Classification
+    # Group coordinates globally to customize botanical defenses
+    abs_lat = abs(lat)
+    if abs_lat <= 23.5:
+        climate_zone = "Tropical"
+    elif abs_lat <= 35.0:
+        climate_zone = "Subtropical"
+    elif abs_lat <= 60.0:
+        climate_zone = "Temperate"
+    else:
+        climate_zone = "Polar/Subpolar"
+
+    # Apparent Temperature / Heat Index Calculation
     vapor_pressure = (live_humidity / 100.0) * 6.105 * (2.71828 ** ((17.27 * live_temp) / (237.7 + live_temp)))
     apparent_temp = live_temp + 0.33 * vapor_pressure - 4.0
     
     # Calculate Clinical Risk Indices
     thermal_stress_score = min(100.0, max(0.0, (apparent_temp - 20.0) * 4.0))
-    
-    # Particulate penalty weighted against WHO target threshold (15 ug/m3)
     pollution_penalty = (live_pm25 / 15.0) * 25.0
     canopy_mitigation = canopy_coverage * 0.5
     cardiorespiratory_risk = min(100.0, max(0.0, (pollution_penalty * 1.5) - canopy_mitigation))
 
-    # Output Visual Design Elements
+    # --- MAIN PORTAL BODY ---
     st.markdown(f"### 📊 Clinical Spatial Assessment: `{resolved_address}`")
-    st.write(f"Evaluating 100% live atmospheric indices across a custom **{diagnostic_radius}m** geographic buffer.")
+    st.write(f"Evaluating micro-climate, chemical, sensory, and ecological indices across a **{diagnostic_radius}m** geographic buffer.")
     
     # 3-Column Metrics Display
     m_col1, m_col2, m_col3 = st.columns(3)
     with m_col1:
-        st.metric("🌳 Zone Canopy Coverage", f"{canopy_coverage}%", "Geographic Canopy Baseline")
+        st.metric("🌳 Zone Canopy Coverage", f"{canopy_coverage}%", f"NDVI Vector: {ndvi_estimate}")
     with m_col2:
         st.metric("🌡️ Apparent Heat Index", f"{round(apparent_temp, 1)}°C", f"Actual Temperature: {live_temp}°C")
     with m_col3:
-        st.metric("💨 Live PM2.5 Dust Level", f"{live_pm25} µg/m³", f"Live PM10: {live_pm10} µg/m³")
+        st.metric("💨 Live PM2.5 Dust Level", f"{round(live_pm25, 1)} µg/m³", f"Live PM10: {round(live_pm10, 1)} µg/m³")
 
     st.write("---")
 
-    # SECTION 1: VISUAL SPATIAL DIAGNOSIS & MAP
+    # SECTION 1: INTERACTIVE SPATIAL DIAGNOSIS & MAP (MAP-CLICK INTEGRATION)
     col_map, col_details = st.columns([3, 2])
     
-    if diagnostic_radius <= 250:
-        zoom_val = 17
-    elif diagnostic_radius <= 600:
-        zoom_val = 15
-    elif diagnostic_radius <= 1200:
-        zoom_val = 14
+    # Adjust zoom level dynamically based on radius selection
+    if diagnostic_radius <= 150:
+        zoom_val = 18  # Building Level
+    elif diagnostic_radius <= 500:
+        zoom_val = 16  # Local Block Level
+    elif diagnostic_radius <= 1500:
+        zoom_val = 14  # Neighborhood Level
     else:
-        zoom_val = 13
+        zoom_val = 11  # City Level
 
-    # Map color based on live air quality parameters
     grade_color = "green" if live_pm25 < 15 else "orange" if live_pm25 < 35 else "red"
 
     with col_map:
-        st.markdown(f"#### 🗺️ Spatial Boundary Analysis ({diagnostic_radius}m Buffer Zone)")
+        st.markdown("#### 🗺️ Interactive Spatial Boundary Map")
+        st.caption("💡 **Tip:** Click anywhere on the map below to drop a pin on a building or city quadrant and recalculate coordinates instantly!")
+        
         m = folium.Map(location=[lat, lon], zoom_start=zoom_val, tiles="OpenStreetMap")
         folium.Circle(
             location=[lat, lon],
@@ -263,21 +360,37 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
             fill=True,
             fill_color=grade_color,
             fill_opacity=0.12,
-            popup=f"Canopy Density: {canopy_coverage}%"
+            popup=f"Boundary Diameter: {diagnostic_radius*2}m"
         ).add_to(m)
-        folium.Marker([lat, lon], icon=folium.Icon(color="darkblue", icon="info-sign")).add_to(m)
-        st_folium(m, width=700, height=380, key=f"clinical_map_{diagnostic_radius}")
+        folium.Marker(
+            [lat, lon], 
+            icon=folium.Icon(color="darkblue", icon="info-sign"),
+            popup="Selected Target"
+        ).add_to(m)
+        
+        # Capture clicks on the map to extract coordinates
+        map_data = st_folium(m, width=700, height=380, key=f"clinical_map_{diagnostic_radius}")
+        
+        # If user clicked on the map, update session state coordinates and rerun
+        if map_data and map_data.get("last_clicked"):
+            click_lat = map_data["last_clicked"]["lat"]
+            click_lon = map_data["last_clicked"]["lng"]
+            if click_lat != st.session_state.lat or click_lon != st.session_state.lon:
+                st.session_state.lat = click_lat
+                st.session_state.lon = click_lon
+                st.session_state.engine_active = True
+                st.rerun()
         
     with col_details:
-        st.markdown("#### 🔬 Clinical Pathological Risk Profiling")
-        st.write(f"The following disease vulnerability models have been processed using live atmospheric sensors:")
+        st.markdown("#### 🔬 Baseline Pathological Risk Profiling")
+        st.write(f"The following general environmental vulnerability models are running:")
         
-        # Real-time airway risk diagnosis
-        if live_pm25 > 30.0:
+        # CARD 1: Respiratory Stress
+        if live_pm25 > 30.0 or live_no2 > 25.0:
             st.markdown("""
             <div class="clinical-card">
                 <strong>🫁 Bronchial & Upper Respiratory Vulnerability: High Risk</strong><br>
-                Elevated PM2.5 particulates trigger alveolar inflammation, worsening chronic bronchitis, allergic rhinitis, and bronchial asthma.
+                Elevated PM2.5 particulates and gaseous irritants trigger respiratory hyper-reactivity, worsening bronchial asthma and allergic rhinitis.
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -288,106 +401,165 @@ if st.session_state.engine_active and st.session_state.lat and st.session_state.
             </div>
             """, unsafe_allow_html=True)
 
-        # Real-time thermal stress diagnosis
+        # CARD 2: Thermal Stress
         if apparent_temp > 35.0:
             st.markdown("""
             <div class="clinical-card">
                 <strong>🩺 Cardiorespiratory & Dermatological Stress: High Risk</strong><br>
-                The thermal penalty intensifies sweat gland obstruction (Miliaria / heat rashes) and elevates blood pressure fluctuation risks.
+                The thermal penalty intensifies sweat gland obstruction (heat rashes) and elevates blood pressure fluctuation risks.
             </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="clinical-card" style="border-left-color: #2e7d32;">
                 <strong>🩺 Thermal Stress: Low/Moderate Risk</strong><br>
-                Thermal values are stable, reducing heat-induced vasodilation and inflammatory flare-ups.
+                Thermal values are stable, reducing heat-induced inflammatory flare-ups.
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ==========================================
+    # MULTI-DIMENSIONAL ENVIRONMENTAL METRICS
+    # ==========================================
+    st.write("---")
+    st.markdown("### 🔬 Advanced Multi-Dimensional Exposure Metrics")
+    tab1, tab2, tab3 = st.tabs(["💨 Gaseous Pollutants", "🌱 Ecological & Carbon Metrics", "🔊 Sensory & Physical Stressors"])
+
+    with tab1:
+        st.markdown("#### Live Gaseous Inhalant Concentrations")
+        g_col1, g_col2, g_col3, g_col4 = st.columns(4)
+        with g_col1:
+            st.metric("Nitrogen Dioxide (NO₂)", f"{round(live_no2, 1)} µg/m³", "Safety: 40 µg/m³")
+            st.caption("Drives acute airway swelling and hyper-reactivity.")
+        with g_col2:
+            st.metric("Sulfur Dioxide (SO₂)", f"{round(live_so2, 1)} µg/m³", "Safety: 20 µg/m³")
+            st.caption("Bronchial muscle spasm and localized airway irritant.")
+        with g_col3:
+            st.metric("Carbon Monoxide (CO)", f"{round(live_co, 1)} µg/m³", "Safety: 4000 µg/m³")
+            st.caption("Binds hemoglobin, placing strain on cardiovascular oxygen delivery.")
+        with g_col4:
+            st.metric("Ground-Level Ozone (O₃)", f"{round(live_o3, 1)} µg/m³", "Safety: 100 µg/m³")
+            st.caption("Highly reactive oxidant damaging delicate lung tissues.")
+
+    with tab2:
+        st.markdown(f"#### Ecological Vigor & Carbon Footprint Indices ({climate_zone} Zone)")
+        e_col1, e_col2, e_col3 = st.columns(3)
+        with e_col1:
+            st.metric("Carbon Sequestration Capacity", f"{carbon_offset_value} Tons/Yr", "Canopy CO₂ Offset per km²")
+        with e_col2:
+            st.metric("Normalized Vegetation Index (NDVI)", f"{ndvi_estimate}", "Scale: 0 (Barren) to 1.0 (Lush)")
+        with e_col3:
+            st.metric("Carbon Footprint Estimate", "Heavy" if live_no2 > 30.0 else "Moderate" if live_no2 > 15.0 else "Minimal", carbon_footprint_scale)
+
+    with tab3:
+        st.markdown("#### Physical & Sensory System Stressors")
+        s_col1, s_col2, s_col3 = st.columns(3)
+        with s_col1:
+            st.metric("Acoustic Noise Pollution Proxy", f"{acoustic_noise} dBA", "Sleep Limit: 40 dBA")
+        with s_col2:
+            st.metric("Night Light Pollution Rating", f"Bortle Class {light_pollution}", "Scale: 1 to 9")
+        with s_col3:
+            st.metric("Atmospheric UV Index", f"{live_uv}", "Safety: <3 Low, >8 Very High")
+
+    # ==========================================
+    # CLINICAL PROFILE DROPDOWN TRIGGER
+    # ==========================================
+    if clinical_profile != "None (General Overview)":
+        st.write("---")
+        st.markdown(f"### 🎯 Specialized Risk Assessment: **{clinical_profile}**")
+        
+        if clinical_profile == "Bronchial Asthma / COPD":
+            trigger_score = min(100.0, (live_pm25 * 1.2) + (live_no2 * 0.8) + (live_so2 * 1.5))
+            severity = "High Alert" if trigger_score > 60 else "Moderate Sensitivity" if trigger_score > 30 else "Normal/Stable"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>🫁 Active Bronchial Risk Assessment: <strong>{severity} (Score: {round(trigger_score, 1)}/100)</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> Fine dust is at {round(live_pm25, 1)} µg/m³ with Gaseous NO₂ at {round(live_no2, 1)} µg/m³. These small agents easily pass into lower airways, causing cellular hyper-reactivity.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif clinical_profile == "Atopic Dermatitis & Eczema":
+            skin_risk = max(100 - live_humidity, (apparent_temp - 25) * 3)
+            severity = "High Flare Risk" if skin_risk > 60 else "Mild Flare Risk" if skin_risk > 35 else "Low Risk"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>🩹 Active Eczema & Skin Barrier Assessment: <strong>{severity}</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> Moisture level is {live_humidity}% and UV Index is {live_uv}.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif clinical_profile == "Allergic Rhinitis / Sinusitis":
+            sinus_risk = min(100.0, (live_pm10 * 1.2) + (live_humidity * 0.5))
+            severity = "Highly Reactive" if sinus_risk > 65 else "Mildly Reactive" if sinus_risk > 40 else "Low Congestion Risk"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>👃 Active Sinus & Mucous Membrane Assessment: <strong>{severity}</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> PM10 coarse particulate load is {round(live_pm10, 1)} µg/m³.</li></ul>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        elif clinical_profile == "Cardiovascular Sensitivity":
+            cardio_risk = min(100.0, (apparent_temp * 1.5) + (live_co * 0.05) + (live_pm25 * 0.5))
+            severity = "Vascular Strain Flag" if cardio_risk > 75 else "Stable Environment"
+            st.markdown(f"""
+            <div class="targeted-card">
+                <h4>❤️ Active Cardiovascular Load Assessment: <strong>{severity}</strong></h4>
+                <ul><li><strong>Live Triggers Detected:</strong> Real-time Heat Stress of {round(apparent_temp, 1)}°C and Carbon Monoxide levels of {round(live_co, 1)} µg/m³.</li></ul>
             </div>
             """, unsafe_allow_html=True)
 
     st.write("---")
 
-    # SECTION 2: VISUAL GREEN PRESCRIPTIONS
+    # SECTION 2: VISUAL GREEN PRESCRIPTIONS (DYNAMICALLY ADAPTED BY CLIMATE ZONE)
     st.markdown("### 💊 Preventive Medicine: Personalized Green Prescriptions")
-    st.write(f"Deploying targeted botanical and architectural therapeutics scaled to mitigate vulnerabilities across your **{diagnostic_radius}m** target buffer.")
-
     pres_col1, pres_col2 = st.columns(2)
     
     with pres_col1:
-        st.markdown(f"#### 🌳 Botanical Interventions ({diagnostic_radius}m Planting Scope)")
+        st.markdown(f"#### 🌳 Botanical Interventions ({diagnostic_radius}m Planting Scope in {climate_zone} Zone)")
         
-        # Dynamic plants & imagery matching the local climate zone
-        if abs(lat) < 23.5:  # Tropical Zone (e.g. Mumbai, Nashik, Southern India)
+        if climate_zone in ["Tropical", "Subtropical"]:
             tree_title = "Neem (Azadirachta indica) & Ashoka (Saraca asoca)"
-            tree_desc = "Highly textured foliar surfaces designed to trap coarse particulate matter (PM10/PM2.5), purifying respiratory air currents. Neem's natural volatile compounds also serve as antimicrobial spatial cleansers."
+            tree_desc = "Highly textured foliar surfaces designed to trap fine particulate matter and gaseous toxins in warm humid or dry zones."
             img_url = "https://images.unsplash.com/photo-1598902108854-10e335adac99?auto=format&fit=crop&w=600&q=80"
-            
-            shrub_title = "Bougainvillea & Plumeria"
-            shrub_desc = f"Drought-resilient vegetative buffers. For a {diagnostic_radius}m buffer, planting these extensively along major adjacent roadways is highly recommended to trap heavy traffic dust emissions."
-            img_url_shrub = "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=600&q=80"
-            
-        else:  # Temperate / Northern Zones
-            tree_title = "Silver Birch (Betula pendula) & Norway Maple"
-            tree_desc = "Frost-hardy deciduous canopy shields. They provide maximum cooling shade during hot summer periods, lowering thermal stress, while dropping leaves in winter to maximize natural sunlight."
+        else:  # Temperate / Polar / General High Latitude
+            tree_title = "Silver Birch (Betula pendula) & Red Maple (Acer rubrum)"
+            tree_desc = "Deciduous canopy shields that survive freezing winters, providing maximum cooling shade in summer, and shedding leaves to let winter sunlight pass."
             img_url = "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80"
             
-            shrub_title = "Juniper & Boxwood"
-            shrub_desc = "Thick, needle-leaf structures optimized to catch winter particulates and minimize localized wind chills."
-            img_url_shrub = "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80"
-            
         st.image(img_url, caption=f"Primary Canopy Recommendation: {tree_title}", use_container_width=True)
-        st.markdown(f"**Target Species:** {tree_title}")
         st.write(tree_desc)
-        
-        st.markdown("---")
-        st.image(img_url_shrub, caption=f"Understory Barrier Recommendation: {shrub_title}", use_container_width=True)
-        st.write(shrub_desc)
 
     with pres_col2:
         st.markdown("#### 🏠 Structural & Architectural Adaptations")
-        
-        # Structural modifications customized dynamically based on the thermal heat index calculated from live readings
-        if apparent_temp > 35.0:
+        if apparent_temp > 32.0:
             struct_title = "High-Albedo Thermal Deflection Membrane"
-            struct_desc = f"With a live Apparent Temperature of **{round(apparent_temp, 1)}°C**, treating top-floor horizontal surfaces with a high-solar-reflectance coating (SRI > 78) is highly indicated to prevent ambient room temperatures from triggering cardiorespiratory loading."
+            struct_desc = f"With a localized Apparent Temperature of **{round(apparent_temp, 1)}°C**, treating roofs with solar-reflective coating (SRI > 78) blocks severe indoor heat accumulation."
             struct_img = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=600&q=80"
         else:
             struct_title = "Passive Spatial Cross-Ventilation Arrays"
-            struct_desc = "For milder thermal periods, structural focus must prioritize uninhibited, low-velocity wind currents to flush out indoor carbon dioxide and stale allergens."
+            struct_desc = "For cooler climates, prioritize natural air streams to safely purge indoor carbon dioxide and common dust mites without relying on energy-intensive chillers."
             struct_img = "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=600&q=80"
             
         st.image(struct_img, caption=f"Engineering Recommendation: {struct_title}", use_container_width=True)
-        st.markdown(f"**Structural Focus:** {struct_title}")
         st.write(struct_desc)
-        
-        st.markdown("---")
-        st.markdown("##### 🧱 Hydrological Micro-Climate Adaptation")
-        st.write(
-            f"For properties situated inside this {diagnostic_radius}m grid, substituting hard, non-porous concrete pavement with "
-            "**permeable grass-jointed blocks** is ideal. This facilitates localized evaporation and water absorption, "
-            "significantly improving ground moisture and preventing surrounding atmospheric dust from blowing freely."
-        )
 
 else:
     # --- VISUAL LANDING HOMEPAGE ---
-    st.info("👈 Enter a target ZIP, PIN, or local address in the sidebar to run the clinical spatial diagnostic engine.")
+    st.info("👈 Enter coordinates, a local address, or click directly on the interactive map in the sidebar to run the diagnostic engine.")
     
     welcome_col1, welcome_col2 = st.columns(2)
     with welcome_col1:
         st.markdown("### 🧬 The CanopyRx Vision: Healing Spaces, Preventing Illness")
         st.write(
-            "Environmental medicine recognizes that our health is deeply tethered to our immediate physical environment. "
-            "By mapping micro-climate stressors (heat load, fine dust, and depleted tree canopy), CanopyRx models specific clinical risks "
-            "for respiratory and skin disorders on a property-by-property basis. "
-            "We prescribe biological and structural buffers to prevent illnesses before they start."
+            "Environmental medicine maps micro-climate stressors like excessive heat load, gaseous inhalants, "
+            "and acoustic levels to specific physiological vulnerabilities. By using hyper-local tracking (from cities to precise buildings), "
+            "CanopyRx designs green solutions to mitigate spatial health risks."
         )
-        st.image("https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80", caption="A healthy urban canopy acts as a physical shield against pathology.", use_container_width=True)
+        st.image("https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=800&q=80", use_container_width=True)
         
     with welcome_col2:
-        st.markdown("### 📋 Instructions for Clinical Diagnosis")
+        st.markdown("### 📋 Spatial Scale Setup")
         st.write(
-            "To generate a custom green prescription for your location:\n"
-            "1. **Specify Region**: Select the target country/continent using the dropdown menu.\n"
-            "2. **Enter Spatial Target**: Provide a localized postal code or street address. (e.g., `422013` for Nashik, `10001` for New York, or `Westminster` for London).\n"
-            "3. **Set Analysis Boundary**: Adjust the slider in the sidebar to define the diagnostics range (e.g., immediate plot footprint or surrounding community layout).\n"
-            "4. **Run Report**: Click the green button to generate your clinical analysis."
+            "To target a location:\n"
+            "* **The City Level:** Enter general coordinates (e.g., `40.7128`, `-74.0060` for NYC) and use a **2000m+ analysis radius**.\n"
+            "* **The Building Level:** Input precise coordinates (e.g., `18.9218`, `72.8347`), or type a building name in the search field, and scale the radius down to **50m-150m** to isolate structural exposure."
         )
