@@ -135,7 +135,7 @@ def generate_gemini_clinical_insight(prompt_context):
         else:
             return "⚠️ Gemini API key not found in Streamlit secrets configuration."
         
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt_context)
         return response.text
     except Exception as e:
