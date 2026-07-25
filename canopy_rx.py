@@ -403,7 +403,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
         st.markdown('</div>', unsafe_allow_html=True)
 
 st.write("---")
-    col_map, col_rep = st.columns([3, 2])
+col_map, col_rep = st.columns([3, 2])
 with col_map:
         st.markdown("#### 🗺️ Selected Region Map Boundary with Radius Buffer & Coordinates")
         
