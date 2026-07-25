@@ -1,4 +1,7 @@
+streamlit
+folium
+streamlit-folium
 requests
 geopy
-streamlit-folium
-streamlit-js-eval
+reportlab
+google-genai
