@@ -103,7 +103,7 @@ if "weather_ai_response" not in st.session_state:
 API_KEY = "1a7d7e605314430bb7b81210261707"  # WeatherAPI Key
 
 def fetch_environmental_data(latitude, longitude):
-    url = "https://api.weatherapi.com/v1/current.json"
+    url = "[https://api.weatherapi.com/v1/current.json](https://api.weatherapi.com/v1/current.json)"
     params = {"key": API_KEY, "q": f"{latitude},{longitude}", "aqi": "yes"}
     try:
         res = requests.get(url, params=params, timeout=8)
@@ -350,7 +350,6 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     col_tree1, col_tree2 = st.columns(2)
     with col_tree1:
         st.markdown("##### 1. *Azadirachta indica* (Neem)")
-        # Using Markdown image syntax safely instead of malformed st.image URLs
         st.markdown("![Azadirachta indica](https://images.unsplash.com/photo-1593121926326-8854c6020593?q=80&w=600&auto=format&fit=crop)")
         st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Releases terpene-based phytoncides that suppress airborne fungal spores in high humidity.</p>", unsafe_allow_html=True)
     with col_tree2:
