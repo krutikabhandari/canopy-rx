@@ -82,6 +82,18 @@ if "resolved_address" not in st.session_state:
 if "nav_page" not in st.session_state:
     st.session_state.nav_page = "🏠 Home / Overview"
 
+# Persistent AI Response Keys
+if "spatial_ai_response" not in st.session_state:
+    st.session_state.spatial_ai_response = None
+if "travel_ai_response" not in st.session_state:
+    st.session_state.travel_ai_response = None
+if "skin_ai_response" not in st.session_state:
+    st.session_state.skin_ai_response = None
+if "nutrition_ai_response" not in st.session_state:
+    st.session_state.nutrition_ai_response = None
+if "weather_ai_response" not in st.session_state:
+    st.session_state.weather_ai_response = None
+
 API_KEY = "1a7d7e605314430bb7b81210261707"  # WeatherAPI Key
 
 def fetch_environmental_data(latitude, longitude):
@@ -115,7 +127,7 @@ def fetch_environmental_data(latitude, longitude):
 
 def geocode_location(query):
     try:
-        geolocator = Nominatim(user_agent="canopyrx_clinical_engine_v14")
+        geolocator = Nominatim(user_agent="canopyrx_clinical_engine_v15")
         loc = geolocator.geocode(query, timeout=10)
         if loc:
             return loc.latitude, loc.longitude, loc.address
@@ -129,12 +141,12 @@ def geocode_location(query):
 # ==========================================
 def generate_gemini_clinical_insight(prompt_context):
     try:
-        # Preload API key securely from Streamlit secrets without exposing it on the UI
         if "GEMINI_API_KEY" in st.secrets:
             genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         else:
             return "⚠️ Gemini API key not found in Streamlit secrets configuration."
         
+        # Updated to active model name
         model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(prompt_context)
         return response.text
@@ -199,7 +211,7 @@ def generate_section_specific_pdf(section_name, address, lat, lon, env, metrics_
 
 
 # ==========================================
-# 🗺️ SIDEBAR NAVIGATION (NO API KEY VISIBLE)
+# 🗺️ SIDEBAR NAVIGATION
 # ==========================================
 st.sidebar.markdown("# 🌳 CanopyRx Suite")
 app_mode = st.sidebar.selectbox(
@@ -321,7 +333,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     </div>
     """, unsafe_allow_html=True)
 
-    # 🤖 GEMINI AI SYNTHESIS BOX
+    # 🤖 PERSISTENT GEMINI AI SYNTHESIS BOX
     st.markdown("### 🤖 Gemini AI Clinical & Spatial Synthesis Engine")
     if st.button("Synthesize Advanced Clinical AI Report", type="primary"):
         with st.spinner("Consulting Gemini AI clinical engine..."):
@@ -334,17 +346,18 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
             - NO2: {env['no2']} µg/m³
             - Canopy Coverage: {canopy_coverage}%
             
-            Provide a rigorous clinical and green engineering assessment covering:
-            1. Cardiorespiratory and immunological risks specific to these pollutant loads.
-            2. Targeted botanical species and biophilic architectural interventions to mitigate local exposure.
+            Provide a rigorous clinical and green engineering assessment covering cardiorespiratory risks and targeted botanical/architectural interventions.
             """
-            ai_response = generate_gemini_clinical_insight(prompt)
-            st.markdown(f"""
-            <div class="clinical-card" style="border-left-color: #064e3b; background-color: #f0fdf4;">
-                <strong>Gemini AI Clinical Intelligence Report:</strong><br><br>
-                {ai_response.replace(chr(10), '<br>')}
-            </div>
-            """, unsafe_allow_html=True)
+            st.session_state.spatial_ai_response = generate_gemini_clinical_insight(prompt)
+
+    # Render persisted result cleanly so it never disappears
+    if st.session_state.spatial_ai_response:
+        st.markdown(f"""
+        <div class="clinical-card" style="border-left-color: #064e3b; background-color: #f0fdf4;">
+            <strong>Gemini AI Clinical Intelligence Report:</strong><br><br>
+            {st.session_state.spatial_ai_response.replace(chr(10), '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
 
     st.write("---")
     col_map, col_rep = st.columns([3, 2])
@@ -399,7 +412,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
 # ==========================================
 elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
     st.markdown("# ✈️ Travel Rx Planner & Journey Mode")
-    st.markdown("##### *Calculate environmental deltas and view real-time commuter journey route exposure maps using City/Pincode or exact Coordinates.*")
+    st.markdown("##### *Calculate environmental deltas and view real-time commuter journey route exposure maps.*")
     st.write("---")
     
     tab1, tab2 = st.tabs(["✈️ Pre-Travel Environmental Delta", "🚗 Live Journey Route Exposure Map"])
@@ -446,20 +459,21 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
             tc2.metric("PM2.5 Particulate Shift", f"{round(pm_diff, 1)} µg/m³", f"Dest: {d_dest['pm25']} µg/m³")
             tc3.metric("UV Index Delta", f"{d_dest['uv'] - d_orig['uv']}")
 
-            # Gemini AI Travel Synthesis
-            st.markdown("### 🤖 Gemini AI Travel Acclimatization Synthesis")
             with st.spinner("Analyzing travel climate shift..."):
                 t_prompt = f"""
                 Analyze the health and acclimatization impacts of traveling from Origin (Lat: {orig_lat}, Lon: {orig_lon}, Temp: {d_orig['temp']}°C, PM2.5: {d_orig['pm25']} µg/m³) 
                 to Destination (Lat: {dest_lat}, Lon: {dest_lon}, Temp: {d_dest['temp']}°C, PM2.5: {d_dest['pm25']} µg/m³).
                 Provide practical clinical precautions, hydration protocols, and respiratory protection advice.
                 """
-                t_ai = generate_gemini_clinical_insight(t_prompt)
-                st.markdown(f"""
-                <div class="clinical-card">
-                    {t_ai.replace(chr(10), '<br>')}
-                </div>
-                """, unsafe_allow_html=True)
+                st.session_state.travel_ai_response = generate_gemini_clinical_insight(t_prompt)
+
+        if st.session_state.travel_ai_response:
+            st.markdown(f"""
+            <div class="clinical-card">
+                <strong>Gemini AI Travel Synthesis:</strong><br><br>
+                {st.session_state.travel_ai_response.replace(chr(10), '<br>')}
+            </div>
+            """, unsafe_allow_html=True)
 
     with tab2:
         st.markdown("### Commuter Journey Route Exposure Map")
@@ -494,7 +508,7 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
 # ==========================================
 elif app_mode == "🧴 Skin & Hair Rx":
     st.markdown("# 🧴 Skin & Hair Rx: Multi-Parameter Barrier Formulations")
-    st.markdown("##### *Comprehensive dermatological and hair barrier prescriptions integrating skin type, sensitivity, water hardness, and environmental exposure.*")
+    st.markdown("##### *Comprehensive dermatological and hair barrier prescriptions.*")
     st.write("---")
     
     st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Local humidity and UV index telemetry sourced via WeatherAPI. Coordinates: ' + f"{st.session_state.lat:.4f}, {st.session_state.lon:.4f}" + '</div>', unsafe_allow_html=True)
@@ -525,18 +539,6 @@ elif app_mode == "🧴 Skin & Hair Rx":
 
     if st.button("Generate Detailed Multi-Parameter Barrier Regimen", type="primary"):
         env_sh = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
-        st.markdown("### 🧪 Advanced Topical & Scalp Prescription")
-        st.markdown(f"""
-        <div class="clinical-card">
-            <strong>Customized Regimen for {skin_type} Skin ({skin_sensitivity}) & {water_hardness} ppm Hard Water:</strong><br>
-            - <strong>AM Barrier Defense:</strong> Micronized Zinc Oxide (18%) physical sunscreen layered over a 5% Niacinamide + Ceramide serum to block urban PM2.5 adherence.<br>
-            - <strong>PM Restorative Protocol:</strong> Biomimetic Phytosphingosine and Cholesterol lipid cream applied within 3 minutes of gentle non-foaming cleansing.<br>
-            - <strong>Scalp & Hair Chelation:</strong> With water hardness at <strong>{water_hardness} ppm</strong> and scalp profile ({scalp_condition}), deploy a weekly chelating shampoo containing Disodium EDTA to strip mineral scale, followed by a pH-balancing apple cider vinegar rinse.
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Gemini AI Dermatological Synthesis
-        st.markdown("### 🤖 Gemini AI Dermatological Expert Synthesis")
         with st.spinner("Consulting Gemini dermatology AI..."):
             d_prompt = f"""
             Provide an expert dermatological and trichological formulation for a patient with:
@@ -548,12 +550,15 @@ elif app_mode == "🧴 Skin & Hair Rx":
             
             Give specific active ingredient recommendations, barrier repair protocols, and hard water mitigation strategies.
             """
-            d_ai = generate_gemini_clinical_insight(d_prompt)
-            st.markdown(f"""
-            <div class="clinical-card" style="background-color: #fdf4f8; border-left-color: #db2777;">
-                {d_ai.replace(chr(10), '<br>')}
-            </div>
-            """, unsafe_allow_html=True)
+            st.session_state.skin_ai_response = generate_gemini_clinical_insight(d_prompt)
+
+    if st.session_state.skin_ai_response:
+        st.markdown(f"""
+        <div class="clinical-card" style="background-color: #fdf4f8; border-left-color: #db2777;">
+            <strong>Gemini AI Dermatological Expert Synthesis:</strong><br><br>
+            {st.session_state.skin_ai_response.replace(chr(10), '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
 
     st.write("---")
     st.markdown("#### 📥 Section-Specific Skin & Hair PDF Report")
@@ -582,7 +587,7 @@ elif app_mode == "🧴 Skin & Hair Rx":
 # ==========================================
 elif app_mode == "🥗 Dietetics & Nutrition Rx":
     st.markdown("# 🥗 Dietetics & Nutrition Rx")
-    st.markdown("##### *Tailoring dietary and fluid intake recommendations based on age, gender, occupation, local cuisine, and environmental stressors.*")
+    st.markdown("##### *Tailoring dietary and fluid intake recommendations.*")
     st.write("---")
     
     col1, col2 = st.columns(2)
@@ -596,21 +601,6 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
 
     if st.button("Generate Personalized Nutritional Plan & Recipes", type="primary"):
         env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
-        st.markdown("### 🍽️ Tailored Nutrition Plan & Local Recipe Integration")
-        st.markdown(f"""
-        <div class="recipe-card">
-            <h4>🥗 Featured Recipe: Anti-Inflammatory Turmeric & Spinach Lentil Dal with Citrus Infusion</h4>
-            <p><strong>Profile Summary:</strong> Age {user_age} | {user_gender} | Occupation: <em>{user_occupation}</em> | Diet: {diet_preference} ({cuisine_region} Cuisine)</p>
-            <ul>
-                <li><strong>Environmental Stress Adaptation:</strong> Current PM2.5 load ({round(env['pm25'],1)} µg/m³) requires elevated intake of pulmonary anti-inflammatory antioxidants (Vitamin C, E, and Omega-3).</li>
-                <li><strong>Hydration Index:</strong> Scaled to ambient temperature ({env['temp']}°C). Target minimum 3.2 liters daily with electrolyte replenishment.</li>
-                <li><strong>Preparation:</strong> Yellow lentils, fresh spinach, turmeric (curcumin anti-inflammatory), and fresh lemon juice (Vitamin C barrier support).</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # Gemini AI Nutrition Synthesis
-        st.markdown("### 🤖 Gemini AI Clinical Nutritionist Synthesis")
         with st.spinner("Consulting Gemini nutrition AI..."):
             n_prompt = f"""
             Provide an advanced clinical nutrition and anti-inflammatory diet plan for:
@@ -620,12 +610,15 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
             
             Highlight specific antioxidant foods, micronutrients for pulmonary protection against particulate matter, and customized hydration strategies.
             """
-            n_ai = generate_gemini_clinical_insight(n_prompt)
-            st.markdown(f"""
-            <div class="clinical-card" style="background-color: #fefce8; border-left-color: #ca8a04;">
-                {n_ai.replace(chr(10), '<br>')}
-            </div>
-            """, unsafe_allow_html=True)
+            st.session_state.nutrition_ai_response = generate_gemini_clinical_insight(n_prompt)
+
+    if st.session_state.nutrition_ai_response:
+        st.markdown(f"""
+        <div class="clinical-card" style="background-color: #fefce8; border-left-color: #ca8a04;">
+            <strong>Gemini AI Clinical Nutritionist Synthesis:</strong><br><br>
+            {st.session_state.nutrition_ai_response.replace(chr(10), '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ==========================================
@@ -633,7 +626,7 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
 # ==========================================
 elif app_mode == "👕 Clothing & Protection Rx":
     st.markdown("# 👕 Clothing & Protection Rx")
-    st.markdown("##### *Smart fabric and barrier clothing selections driven by regional climate conditions, UV index, and atmospheric pollution.*")
+    st.markdown("##### *Smart fabric and barrier clothing selections.*")
     st.write("---")
     activity_type = st.selectbox("Planned Activity:", ["Outdoor Field Work / Exercise", "Urban Commuting", "Indoor Office Environment"])
     if st.button("Get Textile & Gear Recommendation", type="primary"):
@@ -652,7 +645,7 @@ elif app_mode == "👕 Clothing & Protection Rx":
 # ==========================================
 elif app_mode == "⛅ Live Weather & Climate Dashboard":
     st.markdown("# ⛅ Live Weather & Climate Dashboard")
-    st.markdown("##### *Real-time meteorological tracking, air quality indices, disease risks, and pollution monitoring.*")
+    st.markdown("##### *Real-time meteorological tracking and public health advisories.*")
     st.write("---")
     dash_env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     c1, c2, c3, c4 = st.columns(4)
@@ -661,7 +654,6 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
     c3.metric("💨 Wind Speed", f"{dash_env['wind']} km/h")
     c4.metric("☀️ UV Index", f"{dash_env['uv']}")
 
-    # Gemini AI Live Weather Clinical Advisory
     st.markdown("### 🤖 Gemini AI Real-Time Public Health & Climate Advisory")
     if st.button("Generate Live AI Climate Advisory", type="primary"):
         with st.spinner("Synthesizing live climate health advisory..."):
@@ -673,9 +665,12 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
             
             Outline immediate precautions for vulnerable populations, heat stress risks, and vector-borne disease warnings.
             """
-            w_ai = generate_gemini_clinical_insight(w_prompt)
-            st.markdown(f"""
-            <div class="clinical-card">
-                {w_ai.replace(chr(10), '<br>')}
-            </div>
-            """, unsafe_allow_html=True)
+            st.session_state.weather_ai_response = generate_gemini_clinical_insight(w_prompt)
+
+    if st.session_state.weather_ai_response:
+        st.markdown(f"""
+        <div class="clinical-card">
+            <strong>Gemini AI Real-Time Advisory:</strong><br><br>
+            {st.session_state.weather_ai_response.replace(chr(10), '<br>')}
+        </div>
+        """, unsafe_allow_html=True)
