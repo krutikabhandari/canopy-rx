@@ -810,4 +810,3 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
         mime="application/pdf",
         type="primary"
     )
-```[cite: 3]
