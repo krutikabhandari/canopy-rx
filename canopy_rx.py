@@ -402,12 +402,25 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
         st.markdown(cleaned_response)
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.write("---")
+st.write("---")
     col_map, col_rep = st.columns([3, 2])
     with col_map:
         st.markdown("#### 🗺️ Selected Region Map Boundary with Radius Buffer & Coordinates")
+        
+        # Initialize Folium Map centered on current coordinates
         m = folium.Map(location=[st.session_state.lat, st.session_state.lon], zoom_start=14)
-        folium.Marker([st.session_state.lat, st.session_state.lon], popup=f"{resolved_display} (Lat: {st.session_state.lat}, Lon: {st.session_state.lon})").add_to(m)
+        
+        # Use clean HTML custom div icon to avoid any broken image placeholders entirely
+        custom_icon = folium.DivIcon(html="""
+            <div style="font-size: 24px; color: #0d8a72; text-shadow: 1px 1px 2px white; font-weight: bold;">📍</div>
+        """)
+        
+        folium.Marker(
+            [st.session_state.lat, st.session_state.lon], 
+            popup=f"{resolved_display} (Lat: {st.session_state.lat:.4f}, Lon: {st.session_state.lon:.4f})",
+            icon=custom_icon
+        ).add_to(m)
+        
         folium.Circle(
             radius=diagnostic_radius,
             location=[st.session_state.lat, st.session_state.lon],
@@ -417,7 +430,8 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
             fill_opacity=0.2,
             popup=f"Analysis Radius: {diagnostic_radius}m"
         ).add_to(m)
-        st_folium(m, width=580, height=320, key="spatial_map_fixed")
+        
+        st_folium(m, width=580, height=320, key="spatial_map_fixed_clean")
 
     with col_rep:
         st.markdown("#### 📥 Section-Specific Spatial PDF Report")
