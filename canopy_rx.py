@@ -157,7 +157,7 @@ def generate_gemini_clinical_insight(prompt_context):
             + "\n\nIMPORTANT FORMATTING INSTRUCTION: Do NOT wrap the entire output in markdown code blocks (triple backticks ```). Use standard Markdown headers (###), bold styling, bullet points, and plain markdown tables so it displays cleanly."
         )
         
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-3.5-flash')
         response = model.generate_content(formatted_prompt)
         return response.text
     except Exception as e:
