@@ -7,7 +7,7 @@ from datetime import datetime
 import io
 import google.generativeai as genai
 
-# ReportLab Imports for Lab-Grade Structured PDF Generation
+# ReportLab Imports for Structured Professional PDF Generation
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -40,6 +40,7 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
         text-align: center;
         margin-bottom: 18px;
+        min-height: 210px;
     }
     .clinical-card {
         background-color: #f4f9f8;
@@ -51,13 +52,18 @@ st.markdown("""
         line-height: 1.6;
         color: #1e293b;
     }
-    .recipe-card {
-        background: linear-gradient(135deg, #fdfbf7 0%, #f4ede2 100%);
-        border: 1px solid #d4af37;
-        border-left: 6px solid #d4af37;
-        padding: 20px;
+    .gemini-response-card {
+        background-color: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-left: 6px solid #0d8a72;
+        padding: 24px;
         border-radius: 10px;
-        margin-top: 18px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        color: #1e293b;
+        font-size: 15px;
+        line-height: 1.7;
+        margin-top: 20px;
+        margin-bottom: 20px;
     }
     .source-citation {
         background-color: #f8fafc;
@@ -127,7 +133,7 @@ def fetch_environmental_data(latitude, longitude):
 
 def geocode_location(query):
     try:
-        geolocator = Nominatim(user_agent="canopyrx_clinical_engine_v15")
+        geolocator = Nominatim(user_agent="canopyrx_clinical_engine_v16")
         loc = geolocator.geocode(query, timeout=10)
         if loc:
             return loc.latitude, loc.longitude, loc.address
@@ -146,16 +152,20 @@ def generate_gemini_clinical_insight(prompt_context):
         else:
             return "⚠️ Gemini API key not found in Streamlit secrets configuration."
         
-        # Updated to active model name
+        formatted_prompt = (
+            prompt_context 
+            + "\n\nIMPORTANT FORMATTING INSTRUCTION: Do NOT wrap the entire output in markdown code blocks (triple backticks ```). Use standard Markdown headers (###), bold styling, bullet points, and plain markdown tables so it displays cleanly."
+        )
+        
         model = genai.GenerativeModel('gemini-3.5-flash')
-        response = model.generate_content(prompt_context)
+        response = model.generate_content(formatted_prompt)
         return response.text
     except Exception as e:
         return f"Gemini Synthesis Error: {str(e)}"
 
 
 # ==========================================
-# 📄 LAB-GRADE STRUCTURED PDF GENERATOR
+# 📄 PROFESSIONAL STRUCTURED PDF GENERATOR
 # ==========================================
 def generate_section_specific_pdf(section_name, address, lat, lon, env, metrics_data, clinical_analysis, solutions_list):
     buffer = io.BytesIO()
@@ -163,24 +173,25 @@ def generate_section_specific_pdf(section_name, address, lat, lon, env, metrics_
     story = []
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=15, textColor=colors.HexColor('#0d8a72'), spaceAfter=4)
-    subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#555555'), spaceAfter=10)
-    heading_style = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontSize=11, textColor=colors.HexColor('#1e293b'), spaceBefore=8, spaceAfter=4)
-    body_style = ParagraphStyle('BodyDark', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#333333'), spaceAfter=5)
+    title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=14, textColor=colors.HexColor('#0d8a72'), spaceAfter=4)
+    subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#555555'), spaceAfter=8)
+    heading_style = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontSize=10, textColor=colors.HexColor('#1e293b'), spaceBefore=6, spaceAfter=3)
+    body_style = ParagraphStyle('BodyDark', parent=styles['Normal'], fontSize=8.5, textColor=colors.HexColor('#333333'), spaceAfter=4)
+    disclaimer_style = ParagraphStyle('DisclaimerText', parent=styles['Normal'], fontSize=7.5, textColor=colors.HexColor('#64748b'), spaceBefore=10, spaceAfter=4)
 
-    story.append(Paragraph(f"CanopyRx Clinical & Environmental Laboratory Report: {section_name}", title_style))
-    story.append(Paragraph(f"<b>Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | <b>Source Telemetry:</b> WeatherAPI & OpenStreetMap", subtitle_style))
-    story.append(Paragraph(f"<b>Target Region / Coordinates:</b> {address} (Lat: {lat:.4f}, Lon: {lon:.4f})", body_style))
+    story.append(Paragraph(f"CanopyRx Environmental & Clinical Report: {section_name}", title_style))
+    story.append(Paragraph(f"<b>Generated:</b> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | <b>Sources:</b> WeatherAPI & OpenStreetMap Nominatim", subtitle_style))
+    story.append(Paragraph(f"<b>Target Location & Coordinates:</b> {address} (Lat: {lat:.4f}, Lon: {lon:.4f})", body_style))
     story.append(Spacer(1, 4))
 
-    story.append(Paragraph("1. Environmental Parameter Measurements & Diagnostic Meaning", heading_style))
-    story.append(Paragraph("Comprehensive multi-parameter telemetry and physiological impact analysis.", body_style))
+    story.append(Paragraph("1. Location-Specific Environmental Parameter Analysis", heading_style))
+    story.append(Paragraph(f"Multi-parameter telemetry measured directly for coordinates ({lat:.4f}, {lon:.4f}).", body_style))
     
-    table_data = [["Parameter", "Measured Value", "Standard Threshold", "Clinical Meaning & Health Impact"]]
+    table_data = [["Parameter", "Measured Value", "Standard Threshold", "Localized Clinical Significance"]]
     for m in metrics_data:
         table_data.append(m)
         
-    t = Table(table_data, colWidths=[90, 80, 90, 280])
+    t = Table(table_data, colWidths=[90, 75, 85, 290])
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0d8a72')),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
@@ -193,17 +204,20 @@ def generate_section_specific_pdf(section_name, address, lat, lon, env, metrics_
         ('BACKGROUND', (0,1), (-1,-1), colors.HexColor('#f9fafb'))
     ]))
     story.append(t)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
-    story.append(Paragraph("2. Disease Conditions & Regional Risk Factor Analysis", heading_style))
+    story.append(Paragraph("2. Regional Pathophysiological Risk Assessment", heading_style))
     for c in clinical_analysis:
         story.append(Paragraph(f"• <b>{c['condition']}:</b> {c['risk_factor']}", body_style))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
-    story.append(Paragraph("3. Structured Prescriptive Solutions & Green Architecture Protocols", heading_style))
+    story.append(Paragraph("3. Prescriptive Green Engineering & Remediation Solutions", heading_style))
     for idx, sol in enumerate(solutions_list, 1):
         story.append(Paragraph(f"<b>3.{idx} {sol['title']}:</b> {sol['details']}", body_style))
         story.append(Spacer(1, 2))
+
+    story.append(Spacer(1, 6))
+    story.append(Paragraph("<b>Clinical Disclaimer:</b> This report is generated by CanopyRx based on real-time spatial telemetry and computational environmental modeling for the specified coordinates. It is designed to assist healthcare practitioners and urban planners in assessing microclimatic exposure risks. Users should verify local conditions prior to executing structural engineering or therapeutic interventions.", disclaimer_style))
 
     doc.build(story)
     buffer.seek(0)
@@ -239,7 +253,7 @@ st.session_state.nav_page = app_mode
 
 
 # ==========================================
-# PAGE 0: HOME
+# PAGE 0: HOME / OVERVIEW (ALL 7 MODULES)
 # ==========================================
 if app_mode == "🏠 Home / Overview":
     st.markdown("""
@@ -249,22 +263,41 @@ if app_mode == "🏠 Home / Overview":
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("### 🌿 Explore Intelligence Portal Modules (Powered by Gemini AI)")
+    st.markdown('<div class="source-citation"><strong>Portal Data Sources:</strong> Telemetry integrated via WeatherAPI live environmental feed & OpenStreetMap Nominatim spatial geocoding engine.</div>', unsafe_allow_html=True)
+    st.markdown("### 🌿 Explore All Intelligence Portal Modules")
+    
     col1, col2, col3 = st.columns(3)
     with col1:
         st.markdown('<div class="portal-card"><h3>🌍 Spatial Engine 🌴</h3><p>Urban microclimate, NDVI foliage, green prescription & Gemini clinical synthesis.</p></div>', unsafe_allow_html=True)
         if st.button("Launch Spatial Engine 🌿", use_container_width=True):
             st.session_state.nav_page = "🌍 CanopyRx Spatial Engine & Green Engineering"
             st.rerun()
+            
+        st.markdown('<div class="portal-card"><h3>🥗 Dietetics & Nutrition Rx 🥗</h3><p>Anti-inflammatory micronutrients, pulmonary protection & custom hydration protocols.</p></div>', unsafe_allow_html=True)
+        if st.button("Launch Dietetics Rx 🍲", use_container_width=True):
+            st.session_state.nav_page = "🥗 Dietetics & Nutrition Rx"
+            st.rerun()
+
     with col2:
-        st.markdown('<div class="portal-card"><h3>✈️ Travel Rx Planner 🗺️</h3><p>Pre-travel climate deltas & live commuter journey route exposure.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="portal-card"><h3>✈️ Travel Rx Planner 🗺️</h3><p>Pre-travel climate deltas & live commuter journey route exposure analysis.</p></div>', unsafe_allow_html=True)
         if st.button("Launch Travel Rx 🌴", use_container_width=True):
             st.session_state.nav_page = "✈️ Travel Rx Planner & Journey Mode"
             st.rerun()
+            
+        st.markdown('<div class="portal-card"><h3>👕 Clothing & Protection Rx 👕</h3><p>Smart fabric selections, UV protective textiles, and particulate filtration gear.</p></div>', unsafe_allow_html=True)
+        if st.button("Launch Clothing Rx 🧥", use_container_width=True):
+            st.session_state.nav_page = "👕 Clothing & Protection Rx"
+            st.rerun()
+
     with col3:
-        st.markdown('<div class="portal-card"><h3>🧴 Skin & Hair Rx 💧</h3><p>Multi-parameter dermatological barrier protection & custom compounding.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="portal-card"><h3>🧴 Skin & Hair Rx 💧</h3><p>Multi-parameter dermatological barrier protection & hard water mitigation.</p></div>', unsafe_allow_html=True)
         if st.button("Launch Skin & Hair Rx 🌱", use_container_width=True):
             st.session_state.nav_page = "🧴 Skin & Hair Rx"
+            st.rerun()
+            
+        st.markdown('<div class="portal-card"><h3>⛅ Live Weather Dashboard ⛅</h3><p>Real-time meteorological tracking, heat stress alerts & public health advisories.</p></div>', unsafe_allow_html=True)
+        if st.button("Launch Weather Dashboard 🌤️", use_container_width=True):
+            st.session_state.nav_page = "⛅ Live Weather & Climate Dashboard"
             st.rerun()
 
 
@@ -293,7 +326,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     diagnostic_radius = st.sidebar.slider("Spatial Analysis Radius (meters):", min_value=50, max_value=5000, value=500, step=50)
 
     st.markdown("# 🌍 Spatial Engine & Green Engineering Module")
-    st.markdown(f"##### *Global Analysis for: `{st.session_state.resolved_address}` (Lat: `{st.session_state.lat:.4f}`, Lon: `{st.session_state.lon:.4f}` | Radius: {diagnostic_radius}m)*")
+    st.markdown(f"##### *Localized Analysis for: `{st.session_state.resolved_address}` (Lat: `{st.session_state.lat:.4f}`, Lon: `{st.session_state.lon:.4f}` | Radius: {diagnostic_radius}m)*")
     st.write("---")
 
     env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
@@ -317,19 +350,24 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     m8.metric("☀️ Ozone (O3)", f"{round(env['o3'], 1)} µg/m³", "[Safe: <100]")
 
     st.write("---")
-    st.markdown("### 🌿 Specific Green Prescription & Green Architecture Protocols")
-    st.markdown(f"""
-    <div class="clinical-card">
-        <strong>1. Specific Phytoremediation Plant Species (Recommended for Planting):</strong><br>
-        - <em>Azadirachta indica (Neem):</em> Exceptional particulate matter (PM2.5/PM10) filter and heavy metal bio-accumulator.<br>
-        - <em>Polyalthia longifolia (Ashoka Tree):</em> Dense columnar foliage acts as a natural noise barrier and urban dust trap.<br>
-        - <em>Sansevieria trifasciata (Snake Plant) & Chlorophytum comosum (Spider Plant):</em> Ideal ground-level green buffer plants for indoor-outdoor transitional zones to scrub VOCs and nitrogen oxides.
-    </div>
-    <div class="clinical-card">
-        <strong>2. Green Architecture & Structural Engineering Interventions:</strong><br>
+    st.markdown("### 🌿 Specific Green Prescription & Visual Tree Recommendations")
+    
+    col_tree1, col_tree2 = st.columns(2)
+    with col_tree1:
+        st.markdown("##### 1. *Azadirachta indica* (Neem)")
+        st.image("[https://images.unsplash.com/photo-1593121926326-8854c6020593?q=80&w=600&auto=format&fit=crop](https://images.unsplash.com/photo-1593121926326-8854c6020593?q=80&w=600&auto=format&fit=crop)", caption="Azadirachta indica (Neem) - Exceptional particulate matter filter & bioactive terpene emitter.", use_column_width=True)
+        st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Releases terpene-based phytoncides that suppress airborne fungal spores in high humidity.</p>", unsafe_allow_html=True)
+    with col_tree2:
+        st.markdown("##### 2. *Polyalthia longifolia* (False Ashoka)")
+        st.image("[https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=600&auto=format&fit=crop](https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=600&auto=format&fit=crop)", caption="Polyalthia longifolia (False Ashoka) - Columnar urban noise barrier & dust trap.", use_column_width=True)
+        st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Dense canopy architecture acts as a natural wind buffer and particulate precipitation surface.</p>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="clinical-card" style="margin-top: 15px;">
+        <strong>Green Architecture & Structural Engineering Interventions for this Location:</strong><br>
         - <em>Vertical Living Walls (Biophilic Facades):</em> Install modular exterior green walls on building facades facing high-traffic corridors to absorb NO2 and lower ambient temperature by up to 3.5°C.<br>
         - <em>Cool Roof Albedo Coatings:</em> Apply high solar reflectance white membranes (SRI > 80) to reduce urban heat island absorption.<br>
-        - <em>Permeable Paving & Rain Gardens:</em> Replace impermeable concrete buffers with porous pavers and bio-swales within the {diagnostic_radius}m radius to manage stormwater runoff and enhance local microclimate humidity regulation.
+        - <em>Permeable Paving & Rain Gardens:</em> Replace impermeable concrete buffers with porous pavers and bio-swales within the selected radius to manage stormwater runoff and enhance local microclimate humidity regulation.
     </div>
     """, unsafe_allow_html=True)
 
@@ -338,7 +376,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     if st.button("Synthesize Advanced Clinical AI Report", type="primary"):
         with st.spinner("Consulting Gemini AI clinical engine..."):
             prompt = f"""
-            Analyze the following environmental telemetry for location {st.session_state.resolved_address} (Lat: {st.session_state.lat}, Lon: {st.session_state.lon}):
+            Analyze the following environmental telemetry specifically for location {st.session_state.resolved_address} (Lat: {st.session_state.lat}, Lon: {st.session_state.lon}):
             - Temperature: {env['temp']}°C (Apparent: {apparent_temp}°C)
             - Humidity: {env['humidity']}%
             - PM2.5: {env['pm25']} µg/m³
@@ -346,18 +384,21 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
             - NO2: {env['no2']} µg/m³
             - Canopy Coverage: {canopy_coverage}%
             
-            Provide a rigorous clinical and green engineering assessment covering cardiorespiratory risks and targeted botanical/architectural interventions.
+            Provide a rigorous clinical and green engineering assessment covering cardiorespiratory risks and targeted botanical/architectural interventions strictly customized to this location.
             """
             st.session_state.spatial_ai_response = generate_gemini_clinical_insight(prompt)
 
-    # Render persisted result cleanly so it never disappears
+    # Render persisted result safely inside a clean Gemini-style card container
     if st.session_state.spatial_ai_response:
-        st.markdown(f"""
-        <div class="clinical-card" style="border-left-color: #064e3b; background-color: #f0fdf4;">
-            <strong>Gemini AI Clinical Intelligence Report:</strong><br><br>
-            {st.session_state.spatial_ai_response.replace(chr(10), '<br>')}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="gemini-response-card">', unsafe_allow_html=True)
+        st.markdown("#### Gemini AI Clinical Intelligence Report:")
+        cleaned_response = (
+            st.session_state.spatial_ai_response
+            .replace("```markdown", "")
+            .replace("```", "")
+        )
+        st.markdown(cleaned_response)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("---")
     col_map, col_rep = st.columns([3, 2])
@@ -378,7 +419,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
 
     with col_rep:
         st.markdown("#### 📥 Section-Specific Spatial PDF Report")
-        st.write("Download the structured laboratory-grade report containing comprehensive multi-parameter metrics, green plant prescriptions, and architectural solutions.")
+        st.write("Download the structured professional report containing comprehensive multi-parameter metrics, green plant prescriptions, and localized architectural solutions.")
         
         metrics_spatial = [
             ["Canopy Coverage", f"{canopy_coverage}%", "> 30%", "Urban shade and dust filtration capacity"],
@@ -414,6 +455,8 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
     st.markdown("# ✈️ Travel Rx Planner & Journey Mode")
     st.markdown("##### *Calculate environmental deltas and view real-time commuter journey route exposure maps.*")
     st.write("---")
+    
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> WeatherAPI live meteorological telemetry & OpenStreetMap Nominatim routing geocoding.</div>', unsafe_allow_html=True)
     
     tab1, tab2 = st.tabs(["✈️ Pre-Travel Environmental Delta", "🚗 Live Journey Route Exposure Map"])
     
@@ -463,17 +506,20 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
                 t_prompt = f"""
                 Analyze the health and acclimatization impacts of traveling from Origin (Lat: {orig_lat}, Lon: {orig_lon}, Temp: {d_orig['temp']}°C, PM2.5: {d_orig['pm25']} µg/m³) 
                 to Destination (Lat: {dest_lat}, Lon: {dest_lon}, Temp: {d_dest['temp']}°C, PM2.5: {d_dest['pm25']} µg/m³).
-                Provide practical clinical precautions, hydration protocols, and respiratory protection advice.
+                Provide practical clinical precautions, hydration protocols, and respiratory protection advice tailored precisely to this journey.
                 """
                 st.session_state.travel_ai_response = generate_gemini_clinical_insight(t_prompt)
 
         if st.session_state.travel_ai_response:
-            st.markdown(f"""
-            <div class="clinical-card">
-                <strong>Gemini AI Travel Synthesis:</strong><br><br>
-                {st.session_state.travel_ai_response.replace(chr(10), '<br>')}
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="gemini-response-card">', unsafe_allow_html=True)
+            st.markdown("#### Gemini AI Travel Synthesis:")
+            cleaned_travel = (
+                st.session_state.travel_ai_response
+                .replace("```markdown", "")
+                .replace("```", "")
+            )
+            st.markdown(cleaned_travel)
+            st.markdown('</div>', unsafe_allow_html=True)
 
     with tab2:
         st.markdown("### Commuter Journey Route Exposure Map")
@@ -508,7 +554,7 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
 # ==========================================
 elif app_mode == "🧴 Skin & Hair Rx":
     st.markdown("# 🧴 Skin & Hair Rx: Multi-Parameter Barrier Formulations")
-    st.markdown("##### *Comprehensive dermatological and hair barrier prescriptions.*")
+    st.markdown("##### *Comprehensive dermatological and hair barrier prescriptions tailored to local telemetry.*")
     st.write("---")
     
     st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Local humidity and UV index telemetry sourced via WeatherAPI. Coordinates: ' + f"{st.session_state.lat:.4f}, {st.session_state.lon:.4f}" + '</div>', unsafe_allow_html=True)
@@ -528,7 +574,7 @@ elif app_mode == "🧴 Skin & Hair Rx":
     <div class="clinical-card">
         <strong>1. Stratum Corneum Barrier Breakdown & Eczematous Reactivity</strong><br>
         - <em>Risk Factors:</em> Skin Type: <strong>{skin_type}</strong> | Reactivity: <strong>{skin_sensitivity}</strong> | Outdoor Exposure: <strong>{outdoor_exposure_hours} hrs/day</strong>.<br>
-        - <em>Clinical Impact:</em> Low humidity combined with UV oxidative stress compromises intercellular lipid lamellae, leading to micro-fissures and inflammatory reactivity.
+        - <em>Clinical Impact:</em> Local humidity combined with UV oxidative stress compromises intercellular lipid lamellae, leading to micro-fissures and inflammatory reactivity at coordinates ({st.session_state.lat:.4f}, {st.session_state.lon:.4f}).
     </div>
     <div class="clinical-card">
         <strong>2. Hard Water Folliculitis & Scalp Mineral Scale Deposition</strong><br>
@@ -541,24 +587,27 @@ elif app_mode == "🧴 Skin & Hair Rx":
         env_sh = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
         with st.spinner("Consulting Gemini dermatology AI..."):
             d_prompt = f"""
-            Provide an expert dermatological and trichological formulation for a patient with:
+            Provide an expert dermatological and trichological formulation for a patient in {st.session_state.resolved_address} with:
             - Skin Type: {skin_type} (Sensitivity: {skin_sensitivity}, Pores: {pore_congestion})
             - Water Hardness: {water_hardness} ppm
             - Scalp Condition: {scalp_condition}
             - Outdoor Exposure: {outdoor_exposure_hours} hours/day
             - Local Environmental UV Index: {env_sh['uv']}, PM2.5: {env_sh['pm25']} µg/m³
             
-            Give specific active ingredient recommendations, barrier repair protocols, and hard water mitigation strategies.
+            Give specific active ingredient recommendations, barrier repair protocols, and hard water mitigation strategies customized to this environment.
             """
             st.session_state.skin_ai_response = generate_gemini_clinical_insight(d_prompt)
 
     if st.session_state.skin_ai_response:
-        st.markdown(f"""
-        <div class="clinical-card" style="background-color: #fdf4f8; border-left-color: #db2777;">
-            <strong>Gemini AI Dermatological Expert Synthesis:</strong><br><br>
-            {st.session_state.skin_ai_response.replace(chr(10), '<br>')}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="gemini-response-card" style="border-left-color: #db2777;">', unsafe_allow_html=True)
+        st.markdown("#### Gemini AI Dermatological Expert Synthesis:")
+        cleaned_skin = (
+            st.session_state.skin_ai_response
+            .replace("```markdown", "")
+            .replace("```", "")
+        )
+        st.markdown(cleaned_skin)
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("---")
     st.markdown("#### 📥 Section-Specific Skin & Hair PDF Report")
@@ -587,8 +636,10 @@ elif app_mode == "🧴 Skin & Hair Rx":
 # ==========================================
 elif app_mode == "🥗 Dietetics & Nutrition Rx":
     st.markdown("# 🥗 Dietetics & Nutrition Rx")
-    st.markdown("##### *Tailoring dietary and fluid intake recommendations.*")
+    st.markdown("##### *Tailoring dietary and fluid intake recommendations based on local air quality and thermal stress.*")
     st.write("---")
+    
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> WeatherAPI live air quality (PM2.5, PM10) & local temperature telemetry.</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     with col1:
@@ -603,7 +654,7 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
         env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
         with st.spinner("Consulting Gemini nutrition AI..."):
             n_prompt = f"""
-            Provide an advanced clinical nutrition and anti-inflammatory diet plan for:
+            Provide an advanced clinical nutrition and anti-inflammatory diet plan tailored for {st.session_state.resolved_address} (Lat: {st.session_state.lat}):
             - Age: {user_age}, Gender: {user_gender}, Occupation: {user_occupation}
             - Diet: {diet_preference}, Cuisine: {cuisine_region}
             - Local Environmental Stressors: PM2.5 = {env['pm25']} µg/m³, Temperature = {env['temp']}°C
@@ -613,12 +664,33 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
             st.session_state.nutrition_ai_response = generate_gemini_clinical_insight(n_prompt)
 
     if st.session_state.nutrition_ai_response:
-        st.markdown(f"""
-        <div class="clinical-card" style="background-color: #fefce8; border-left-color: #ca8a04;">
-            <strong>Gemini AI Clinical Nutritionist Synthesis:</strong><br><br>
-            {st.session_state.nutrition_ai_response.replace(chr(10), '<br>')}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="gemini-response-card" style="border-left-color: #ca8a04;">', unsafe_allow_html=True)
+        st.markdown("#### Gemini AI Clinical Nutritionist Synthesis:")
+        cleaned_nutri = (
+            st.session_state.nutrition_ai_response
+            .replace("```markdown", "")
+            .replace("```", "")
+        )
+        st.markdown(cleaned_nutri)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("---")
+    st.markdown("#### 📥 Section-Specific Nutrition PDF Report")
+    env_n = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
+    metrics_n = [
+        ["PM2.5 Exposure", f"{round(env_n['pm25'], 1)} µg/m³", "< 15 µg/m³", "Oxidative stress level requiring dietary antioxidants"],
+        ["Ambient Temperature", f"{env_n['temp']}°C", "18°C - 27°C", "Hydration and electrolyte replenishment index"]
+    ]
+    clinical_n = [
+        {"condition": "Pulmonary Oxidative Stress", "risk_factor": f"Particulate load ({round(env_n['pm25'],1)} µg/m³) depletes endogenous glutathione reserves."},
+        {"condition": "Thermal Dehydration Risk", "risk_factor": f"Ambient temperature of {env_n['temp']}°C requires structured electrolyte intake."}
+    ]
+    solutions_n = [
+        {"title": "Antioxidant-Rich Phyto-Nutrients", "details": "Incorporate vitamin C, E, and curcumin-rich foods to mitigate alveolar inflammation."},
+        {"title": "Customized Hydration Protocol", "details": "Consume 35ml of water per kg of body weight supplemented with natural electrolytes."}
+    ]
+    pdf_bytes_n = generate_section_specific_pdf("Dietetics & Nutrition Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_n, metrics_n, clinical_n, solutions_n)
+    st.download_button("📥 Download Nutrition PDF Report", data=pdf_bytes_n, file_name="Nutrition_Rx_Report.pdf", mime="application/pdf", type="primary")
 
 
 # ==========================================
@@ -626,18 +698,39 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
 # ==========================================
 elif app_mode == "👕 Clothing & Protection Rx":
     st.markdown("# 👕 Clothing & Protection Rx")
-    st.markdown("##### *Smart fabric and barrier clothing selections.*")
+    st.markdown("##### *Smart fabric and barrier clothing selections based on local UV index and particulate load.*")
     st.write("---")
+    
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> WeatherAPI live UV index and particulate telemetry.</div>', unsafe_allow_html=True)
+    
     activity_type = st.selectbox("Planned Activity:", ["Outdoor Field Work / Exercise", "Urban Commuting", "Indoor Office Environment"])
     if st.button("Get Textile & Gear Recommendation", type="primary"):
         env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
         st.markdown(f"""
         <div class="clinical-card">
-            <strong>Gear Advisory (Activity: {activity_type} | UV Index: {env['uv']} | Temp: {env['temp']}°C):</strong><br>
-            - <strong>Respiratory Gear:</strong> {"N95 / KN95 respirator required due to active particulate load (" + str(round(env['pm25'],1)) + " µg/m³)." if env['pm25'] > 20 else "Standard surgical mask optional."}<br>
-            - <strong>Fabric Selection:</strong> Breathable, tightly-woven organic cotton or performance synthetics with UPF 50+ sun protection rating.
+            <strong>Gear Advisory for {st.session_state.resolved_address} (Activity: {activity_type} | UV Index: {env['uv']} | Temp: {env['temp']}°C):</strong><br>
+            - <strong>Respiratory Gear:</strong> {"N95 / KN95 respirator required due to active particulate load (" + str(round(env['pm25'],1)) + " µg/m³)." if env['pm25'] > 20 else "Standard surgical mask optional for current baseline."}<br>
+            - <strong>Fabric Selection:</strong> Breathable, tightly-woven organic cotton or performance synthetics with UPF 50+ sun protection rating to counteract local UV levels.
         </div>
         """, unsafe_allow_html=True)
+
+    st.write("---")
+    st.markdown("#### 📥 Section-Specific Clothing & Protection PDF Report")
+    env_c = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
+    metrics_c = [
+        ["UV Index", f"{env_c['uv']}", "< 3.0", "Solar radiation risk requiring UPF protective textiles"],
+        ["PM2.5 Particulate", f"{round(env_c['pm25'], 1)} µg/m³", "< 15 µg/m³", "Respiratory filtration requirement"]
+    ]
+    clinical_c = [
+        {"condition": "Solar UV Cutaneous Damage", "risk_factor": f"UV index of {env_c['uv']} requires specialized sun-protective clothing."},
+        {"condition": "Inhalation Particulate Risk", "risk_factor": f"PM2.5 concentration at {round(env_c['pm25'],1)} µg/m³ mandates barrier filtration."}
+    ]
+    solutions_c = [
+        {"title": "UPF 50+ Performance Textiles", "details": "Deploy tightly-woven garments or UV-blocking sleeves during outdoor exposure."},
+        {"title": "Certified N95 Respiratory Mask", "details": "Wear filtration masks during high-exposure transit or outdoor work."}
+    ]
+    pdf_bytes_c = generate_section_specific_pdf("Clothing & Protection Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_c, metrics_c, clinical_c, solutions_c)
+    st.download_button("📥 Download Protection PDF Report", data=pdf_bytes_c, file_name="Clothing_Protection_Report.pdf", mime="application/pdf", type="primary")
 
 
 # ==========================================
@@ -645,8 +738,11 @@ elif app_mode == "👕 Clothing & Protection Rx":
 # ==========================================
 elif app_mode == "⛅ Live Weather & Climate Dashboard":
     st.markdown("# ⛅ Live Weather & Climate Dashboard")
-    st.markdown("##### *Real-time meteorological tracking and public health advisories.*")
+    st.markdown("##### *Real-time meteorological tracking and public health advisories for your active location.*")
     st.write("---")
+    
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Real-time meteorological stream via WeatherAPI. Location: ' + st.session_state.resolved_address + '</div>', unsafe_allow_html=True)
+    
     dash_env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("🌡️ Temperature", f"{dash_env['temp']} °C")
@@ -658,19 +754,40 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
     if st.button("Generate Live AI Climate Advisory", type="primary"):
         with st.spinner("Synthesizing live climate health advisory..."):
             w_prompt = f"""
-            Provide an urgent public health advisory for real-time meteorological conditions at {st.session_state.resolved_address}:
+            Provide an urgent public health advisory for real-time meteorological conditions at {st.session_state.resolved_address} (Lat: {st.session_state.lat}, Lon: {st.session_state.lon}):
             - Temperature: {dash_env['temp']}°C, Humidity: {dash_env['humidity']}%
             - PM2.5: {dash_env['pm25']} µg/m³, PM10: {dash_env['pm10']} µg/m³, NO2: {dash_env['no2']} µg/m³
             - UV Index: {dash_env['uv']}
             
-            Outline immediate precautions for vulnerable populations, heat stress risks, and vector-borne disease warnings.
+            Outline immediate precautions for vulnerable populations, heat stress risks, and vector-borne disease warnings customized precisely to this location.
             """
             st.session_state.weather_ai_response = generate_gemini_clinical_insight(w_prompt)
 
     if st.session_state.weather_ai_response:
-        st.markdown(f"""
-        <div class="clinical-card">
-            <strong>Gemini AI Real-Time Advisory:</strong><br><br>
-            {st.session_state.weather_ai_response.replace(chr(10), '<br>')}
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="gemini-response-card">', unsafe_allow_html=True)
+        st.markdown("#### Gemini AI Real-Time Advisory:")
+        cleaned_weather = (
+            st.session_state.weather_ai_response
+            .replace("```markdown", "")
+            .replace("```", "")
+        )
+        st.markdown(cleaned_weather)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("---")
+    st.markdown("#### 📥 Section-Specific Weather & Climate PDF Report")
+    metrics_w = [
+        ["Ambient Temperature", f"{dash_env['temp']}°C", "18°C - 27°C", "Thermal stress and heat exhaustion index"],
+        ["Relative Humidity", f"{dash_env['humidity']}%", "40% - 60%", "Moisture saturation and mold spore risk"],
+        ["PM2.5 Particulate", f"{round(dash_env['pm25'], 1)} µg/m³", "< 15 µg/m³", "Air quality safety index"]
+    ]
+    clinical_w = [
+        {"condition": "Thermal Heat Stress", "risk_factor": f"Current temperature of {dash_env['temp']}°C requires heat mitigation precautions."},
+        {"condition": "Atmospheric Stagnation", "risk_factor": f"Humidity at {dash_env['humidity']}% increases allergen and spore persistence."}
+    ]
+    solutions_w = [
+        {"title": "Climate Acclimatization Protocol", "details": "Limit strenuous outdoor exertion during peak solar radiation hours."},
+        {"title": "Indoor Air Filtration", "details": "Operate HEPA filtration units indoors during high humidity and particulate episodes."}
+    ]
+    pdf_bytes_w = generate_section_specific_pdf("Live Weather & Climate Dashboard", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, dash_env, metrics_w, clinical_w, solutions_w)
+    st.download_button("📥 Download Weather PDF Report", data=pdf_bytes_w, file_name="Weather_Climate_Report.pdf", mime="application/pdf", type="primary")
