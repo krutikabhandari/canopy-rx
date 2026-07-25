@@ -142,7 +142,7 @@ def generate_section_specific_pdf(section_name, address, lat, lon, env, metrics_
     
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle('DocTitle', parent=styles['Heading1'], fontSize=15, textColor=colors.HexColor('#0d8a72'), spaceAfter=4)
-    subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#555555'], spaceAfter=10)
+    subtitle_style = ParagraphStyle('DocSubTitle', parent=styles['Normal'], fontSize=8, textColor=colors.HexColor('#555555'), spaceAfter=10)
     heading_style = ParagraphStyle('SectionHeading', parent=styles['Heading2'], fontSize=11, textColor=colors.HexColor('#1e293b'), spaceBefore=8, spaceAfter=4)
     body_style = ParagraphStyle('BodyDark', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#333333'), spaceAfter=5)
 
@@ -232,13 +232,13 @@ st.sidebar.write("---")
 if app_mode == "🏠 Home / Overview":
     st.markdown("""
     <div class="main-header" style="background: linear-gradient(135deg, #064e3b 0%, #0d8a72 50%, #1e3a8a 100%);">
-        <h1>🌳 CanopyRx: Green Engineering & Environmental Health Portal</h1>
+        <h1>🌳 CanopyRx: Green Engineering & Environmental Health Portal[cite: 8]</h1>
         <p style="font-size: 16px; margin-top: 8px; color: #e2e8f0;">Quantifying Green Cover Canopy Solutions to Combat Localized Anthropogenic Exposure and Restore Global Spatial Health.</p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("### 🌿 Explore the Intelligence Portals")
-    st.write("Click any module card below to launch the interactive environmental engine:")
+    st.markdown("### 🌿 Explore the Intelligence Portal Modules[cite: 8]")
+    st.write("Click any module card below to launch the interactive environmental engine[cite: 8]:")
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -309,17 +309,17 @@ if app_mode == "🏠 Home / Overview":
             st.session_state.nav_page = "⛅ Live Weather & Climate Dashboard"
             st.rerun()
 
-    st.markdown('<div class="source-citation"><strong>Data Sources Overview:</strong> Real-time telemetry from WeatherAPI and geospatial mapping from OpenStreetMap Nominatim.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources Overview:</strong> Real-time telemetry from WeatherAPI and geospatial mapping from OpenStreetMap Nominatim.[cite: 8]</div>', unsafe_allow_html=True)
 
 
 # ==========================================
 # PAGE 1: 🌍 SPATIAL ENGINE & GREEN ENGINEERING
 # ==========================================
 elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
-    st.sidebar.markdown("### 📋 Spatial Engine Inputs (Pincode & Search)")
+    st.sidebar.markdown("### 📋 Spatial Engine Inputs (Pincode & Search)[cite: 8]")
     
-    search_query = st.sidebar.text_input("Search Address / Pincode / Landmark Anywhere:", "Nashik 422001")
-    diagnostic_radius = st.sidebar.slider("Spatial Analysis Radius (meters):", min_value=50, max_value=5000, value=500, step=50)
+    search_query = st.sidebar.text_input("Search Address / Pincode / Landmark Anywhere:", "Nashik 422001")[cite: 8]
+    diagnostic_radius = st.sidebar.slider("Spatial Analysis Radius (meters):", min_value=50, max_value=5000, value=500, step=50)[cite: 8]
     
     if st.sidebar.button("Run Spatial Diagnostic", type="primary", use_container_width=True):
         if search_query:
@@ -327,8 +327,8 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
             if lat and lon:
                 st.session_state.lat, st.session_state.lon, st.session_state.resolved_address = lat, lon, addr
 
-    st.markdown("# 🌍 Spatial Engine & Green Engineering Module")
-    st.markdown(f"##### *Global Analysis for: `{st.session_state.resolved_address}` (Pincode: 422001 | Radius: {diagnostic_radius}m)*")
+    st.markdown("# 🌍 Spatial Engine & Green Engineering Module[cite: 8]")
+    st.markdown(f"##### *Global Analysis for: `{st.session_state.resolved_address}` (Pincode: 422001 | Radius: {diagnostic_radius}m)*[cite: 8]")
     st.write("---")
 
     env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
@@ -336,7 +336,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     canopy_coverage = round(min(85.0, max(4.0, 45.0 - (pollution_load * 0.25))), 1)
     apparent_temp = env["temp"] + 2.0
 
-    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Spatial telemetry fetched via WeatherAPI & OpenStreetMap Nominatim. Pincode: 422001.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Spatial telemetry fetched via WeatherAPI & OpenStreetMap Nominatim. Pincode: 422001.[cite: 8]</div>', unsafe_allow_html=True)
 
     m_col1, m_col2, m_col3 = st.columns(3)
     m_col1.metric("🌳 Canopy Coverage Index", f"{canopy_coverage}%", "[Target: >30%]")
@@ -346,7 +346,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     st.write("---")
 
     # Major Disease Conditions & Regional Risk Factor Breakdown
-    st.markdown("### 🦠 Regional Major Disease Conditions & Risk Factor Profiles")
+    st.markdown("### 🦠 Regional Major Disease Conditions & Risk Factor Profiles[cite: 8]")
     st.markdown("""
     <div class="clinical-card">
         <strong>1. Chronic Obstructive Pulmonary Disease (COPD) & Asthma Exacerbation</strong><br>
@@ -368,7 +368,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     st.write("---")
     col_map, col_rep = st.columns([3, 2])
     with col_map:
-        st.markdown("#### 🗺️ Selected Region Map Boundary with Radius Buffer & Pincode")
+        st.markdown("#### 🗺️ Selected Region Map Boundary with Radius Buffer & Pincode[cite: 8]")
         m = folium.Map(location=[st.session_state.lat, st.session_state.lon], zoom_start=14)
         folium.Marker([st.session_state.lat, st.session_state.lon], popup=f"{st.session_state.resolved_address} (Pincode: 422001)").add_to(m)
         folium.Circle(
@@ -383,8 +383,8 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
         st_folium(m, width=580, height=320, key="spatial_map_fixed")
 
     with col_rep:
-        st.markdown("#### 📥 Section-Specific Spatial PDF Report")
-        st.write("Download the structured laboratory-grade report containing spatial metrics, regional disease profiles, and green engineering solutions.")
+        st.markdown("#### 📥 Section-Specific Spatial PDF Report[cite: 8]")
+        st.write("Download the structured laboratory-grade report containing spatial metrics, regional disease profiles, and green engineering solutions.[cite: 8]")
         
         metrics_spatial = [
             ["Canopy Coverage", f"{canopy_coverage}%", "> 30%", "Urban shade and dust filtration capacity"],
@@ -405,7 +405,7 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
 
         pdf_bytes = generate_section_specific_pdf("Spatial Engine & Green Engineering", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env, metrics_spatial, clinical_spatial, solutions_spatial)
         st.download_button(
-            label="📥 Download Spatial PDF Report",
+            label="📥 Download Spatial PDF Report[cite: 8]",
             data=pdf_bytes,
             file_name=f"CanopyRx_Spatial_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
             mime="application/pdf",
@@ -418,21 +418,21 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
 # PAGE 1B: TRAVEL RX PLANNER & JOURNEY MODE
 # ==========================================
 elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
-    st.markdown("# ✈️ Travel Rx Planner & Journey Mode")
-    st.markdown("##### *Calculate environmental deltas and view real-time commuter journey route exposure maps.*")
+    st.markdown("# ✈️ Travel Rx Planner & Journey Mode[cite: 8]")
+    st.markdown("##### *Calculate environmental deltas and view real-time commuter journey route exposure maps.*[cite: 8]")
     st.write("---")
     
-    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Origin & Destination telemetry fetched via WeatherAPI & OpenStreetMap. Pincode: 422001.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Origin & Destination telemetry fetched via WeatherAPI & OpenStreetMap. Pincode: 422001.[cite: 8]</div>', unsafe_allow_html=True)
 
     tab1, tab2 = st.tabs(["✈️ Pre-Travel Environmental Delta", "🚗 Live Journey Route Exposure Map"])
     
     with tab1:
-        st.markdown("### Pre-Travel Climate & Exposure Comparison")
+        st.markdown("### Pre-Travel Climate & Exposure Comparison[cite: 8]")
         c1, c2 = st.columns(2)
         with c1:
-            orig_query = st.text_input("Origin City / Pincode:", "Nashik 422001")
+            orig_query = st.text_input("Origin City / Pincode:", "Nashik 422001")[cite: 8]
         with c2:
-            dest_query = st.text_input("Destination City / Pincode:", "Mumbai 400001")
+            dest_query = st.text_input("Destination City / Pincode:", "Mumbai 400001")[cite: 8]
             
         if st.button("Calculate Travel Delta", type="primary"):
             d_orig = fetch_environmental_data(19.9975, 73.7898)
@@ -446,7 +446,7 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
             tc3.metric("UV Index Delta", f"{d_dest['uv'] - d_orig['uv']}")
 
     with tab2:
-        st.markdown("### Commuter Journey Route Exposure Map (Pincode Corridor)")
+        st.markdown("### Commuter Journey Route Exposure Map (Pincode Corridor)[cite: 8]")
         journey_map = folium.Map(location=[19.5367, 73.3338], zoom_start=9)
         folium.Marker([19.9975, 73.7898], popup="Origin: Nashik (Pincode: 422001)", icon=folium.Icon(color="green")).add_to(journey_map)
         folium.Marker([19.0760, 72.8777], popup="Destination: Mumbai (Pincode: 400001)", icon=folium.Icon(color="red")).add_to(journey_map)
@@ -454,7 +454,7 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
         st_folium(journey_map, width=800, height=380, key="journey_map_fixed")
 
     st.write("---")
-    st.markdown("#### 📥 Section-Specific Travel Rx PDF Report")
+    st.markdown("#### 📥 Section-Specific Travel Rx PDF Report[cite: 8]")
     env_t = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     metrics_travel = [
         ["Route Distance", "165 km", "< 50 km", "Inter-city transit exposure corridor"],
@@ -470,23 +470,23 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
         {"title": "Electrolyte Hydration Protocol", "details": "Consume 500ml of ionized electrolyte solution every 90 minutes of transit."}
     ]
     pdf_bytes_travel = generate_section_specific_pdf("Travel Rx Planner", "Nashik to Mumbai (Pincode: 422001)", st.session_state.lat, st.session_state.lon, env_t, metrics_travel, clinical_travel, solutions_travel)
-    st.download_button("📥 Download Travel PDF Report", data=pdf_bytes_travel, file_name="Travel_Rx_Report.pdf", mime="application/pdf", type="primary")
+    st.download_button("📥 Download Travel PDF Report[cite: 8]", data=pdf_bytes_travel, file_name="Travel_Rx_Report.pdf", mime="application/pdf", type="primary")
 
 
 # ==========================================
 # PAGE 2: SKIN & HAIR RX
 # ==========================================
 elif app_mode == "🧴 Skin & Hair Rx":
-    st.markdown("# 🧴 Skin & Hair Rx: Environmental Barrier Formulations")
-    st.markdown("##### *Protect your physical moisture barrier from local atmospheric elements, solar radiation, and water hardness indices.*")
+    st.markdown("# 🧴 Skin & Hair Rx: Environmental Barrier Formulations[cite: 8]")
+    st.markdown("##### *Protect your physical moisture barrier from local atmospheric elements, solar radiation, and water hardness indices.*[cite: 8]")
     st.write("---")
     
-    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Local humidity and UV index telemetry sourced via WeatherAPI. Pincode: 422001.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Local humidity and UV index telemetry sourced via WeatherAPI. Pincode: 422001.[cite: 8]</div>', unsafe_allow_html=True)
     
-    skin_type = st.selectbox("Select Skin Type:", ["Sensitive / Reactive", "Dry / Compromised Barrier", "Oily / Acne-Prone", "Combination"])
-    water_hardness = st.select_slider("Water Hardness Level (ppm):", options=[50, 100, 150, 200, 300, 400], value=200)
+    skin_type = st.selectbox("Select Skin Type:", ["Sensitive / Reactive", "Dry / Compromised Barrier", "Oily / Acne-Prone", "Combination"])[cite: 8]
+    water_hardness = st.select_slider("Water Hardness Level (ppm):", options=[50, 100, 150, 200, 300, 400], value=200)[cite: 8]
     
-    st.markdown("### 🦠 Dermatological & Cutaneous Disease Risks")
+    st.markdown("### 🦠 Dermatological & Cutaneous Disease Risks[cite: 8]")
     st.markdown("""
     <div class="clinical-card">
         <strong>1. Contact Dermatitis & Barrier Breakdown</strong><br>
@@ -501,7 +501,7 @@ elif app_mode == "🧴 Skin & Hair Rx":
     """.format(hardness=water_hardness), unsafe_allow_html=True)
 
     if st.button("Generate Detailed Barrier Regimen", type="primary"):
-        st.markdown("### 🧪 Deep Multi-Tier Topical & Hair Formulation")
+        st.markdown("### 🧪 Deep Multi-Tier Topical & Hair Formulation[cite: 8]")
         st.markdown(f"""
         <div class="clinical-card">
             <strong>Free Tier Protocol for {skin_type}:</strong><br>
@@ -512,7 +512,7 @@ elif app_mode == "🧴 Skin & Hair Rx":
         """, unsafe_allow_html=True)
 
     st.write("---")
-    st.markdown("#### 📥 Section-Specific Skin & Hair PDF Report")
+    st.markdown("#### 📥 Section-Specific Skin & Hair PDF Report[cite: 8]")
     env_sh = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     metrics_sh = [
         ["Water Hardness", f"{water_hardness} ppm", "< 100 ppm", "Mineral scaling and hair cuticle damage index"],
@@ -529,29 +529,29 @@ elif app_mode == "🧴 Skin & Hair Rx":
         {"title": "Mineral SPF 18+ Protection", "details": "Deploy physical zinc oxide sunscreens to reflect UV radiation and block particulate adhesion."}
     ]
     pdf_bytes_sh = generate_section_specific_pdf("Skin & Hair Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_sh, metrics_sh, clinical_sh, solutions_sh)
-    st.download_button("📥 Download Skin & Hair PDF Report", data=pdf_bytes_sh, file_name="Skin_Hair_Rx_Report.pdf", mime="application/pdf", type="primary")
+    st.download_button("📥 Download Skin & Hair PDF Report[cite: 8]", data=pdf_bytes_sh, file_name="Skin_Hair_Rx_Report.pdf", mime="application/pdf", type="primary")
 
 
 # ==========================================
 # PAGE 3: DIETETICS & NUTRITION RX
 # ==========================================
 elif app_mode == "🥗 Dietetics & Nutrition Rx":
-    st.markdown("# 🥗 Dietetics & Nutrition Rx")
-    st.markdown("##### *Tailoring dietary and fluid intake recommendations based on age, gender, occupation, local cuisine, and environmental stressors.*")
+    st.markdown("# 🥗 Dietetics & Nutrition Rx[cite: 8]")
+    st.markdown("##### *Tailoring dietary and fluid intake recommendations based on age, gender, occupation, local cuisine, and environmental stressors.*[cite: 8]")
     st.write("---")
     
-    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Environmental pollutant and thermal metrics sourced via WeatherAPI. Pincode: 422001.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Environmental pollutant and thermal metrics sourced via WeatherAPI. Pincode: 422001.[cite: 8]</div>', unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
-        user_age = st.number_input("Age:", min_value=1, max_value=120, value=28)
-        user_gender = st.selectbox("Gender:", ["Male", "Female", "Other"])
-        user_occupation = st.selectbox("Occupation Category:", ["Outdoor Field Worker / Laborer", "Desk / Office Worker", "Commuter / Travel Intensive"])
+        user_age = st.number_input("Age:", min_value=1, max_value=120, value=28)[cite: 8]
+        user_gender = st.selectbox("Gender:", ["Male", "Female", "Other"])[cite: 8]
+        user_occupation = st.selectbox("Occupation Category:", ["Outdoor Field Worker / Laborer", "Desk / Office Worker", "Commuter / Travel Intensive"])[cite: 8]
     with col2:
-        diet_preference = st.selectbox("Dietary Preference:", ["Vegetarian", "Vegan", "Omnivore / Non-Vegetarian"])
-        cuisine_region = st.selectbox("Local Cuisine Style:", ["Indian (North / South)", "Mediterranean", "Western / Continental"])
+        diet_preference = st.selectbox("Dietary Preference:", ["Vegetarian", "Vegan", "Omnivore / Non-Vegetarian"])[cite: 8]
+        cuisine_region = st.selectbox("Local Cuisine Style:", ["Indian (North / South)", "Mediterranean", "Western / Continental"])[cite: 8]
 
-    st.markdown("### 🦠 Nutritional Deficiency & Metabolic Risk Factors")
+    st.markdown("### 🦠 Nutritional Deficiency & Metabolic Risk Factors[cite: 8]")
     st.markdown("""
     <div class="clinical-card">
         <strong>1. Oxidative Lung Injury & Systemic Inflammation</strong><br>
@@ -567,7 +567,7 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
 
     if st.button("Generate Personalized Nutritional Plan & Recipes", type="primary"):
         env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
-        st.markdown("### 🍽️ Tailored Nutrition Plan & Local Recipe Integration")
+        st.markdown("### 🍽️ Tailored Nutrition Plan & Local Recipe Integration[cite: 8]")
         
         st.markdown("""
         <div class="recipe-card">
@@ -585,7 +585,7 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.write("---")
-    st.markdown("#### 📥 Section-Specific Dietetics & Nutrition PDF Report")
+    st.markdown("#### 📥 Section-Specific Dietetics & Nutrition PDF Report[cite: 8]")
     env_n = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     metrics_nutrition = [
         ["Ambient Temperature", f"{env_n['temp']}°C", "18°C - 27°C", "Hydration and fluid turnover requirement index"],
@@ -601,22 +601,22 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
         {"title": "Anti-inflammatory Local Diet", "details": "Consume fresh leafy greens and citrus infusions tailored to regional cuisine."}
     ]
     pdf_bytes_n = generate_section_specific_pdf("Dietetics & Nutrition Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_n, metrics_nutrition, clinical_nutrition, solutions_nutrition)
-    st.download_button("📥 Download Nutrition PDF Report", data=pdf_bytes_n, file_name="Nutrition_Rx_Report.pdf", mime="application/pdf", type="primary")
+    st.download_button("📥 Download Nutrition PDF Report[cite: 8]", data=pdf_bytes_n, file_name="Nutrition_Rx_Report.pdf", mime="application/pdf", type="primary")
 
 
 # ==========================================
 # PAGE 4: CLOTHING & PROTECTION RX
 # ==========================================
 elif app_mode == "👕 Clothing & Protection Rx":
-    st.markdown("# 👕 Clothing & Protection Rx")
-    st.markdown("##### *Smart fabric and barrier clothing selections driven by regional climate conditions, UV index, and atmospheric pollution.*")
+    st.markdown("# 👕 Clothing & Protection Rx[cite: 8]")
+    st.markdown("##### *Smart fabric and barrier clothing selections driven by regional climate conditions, UV index, and atmospheric pollution.*[cite: 8]")
     st.write("---")
     
-    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> UV index and ambient temperature telemetry sourced via WeatherAPI. Pincode: 422001.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> UV index and ambient temperature telemetry sourced via WeatherAPI. Pincode: 422001.[cite: 8]</div>', unsafe_allow_html=True)
 
-    activity_type = st.selectbox("Planned Activity:", ["Outdoor Field Work / Exercise", "Urban Commuting", "Indoor Office Environment"])
+    activity_type = st.selectbox("Planned Activity:", ["Outdoor Field Work / Exercise", "Urban Commuting", "Indoor Office Environment"])[cite: 8]
     
-    st.markdown("### 🦠 Occupational & Environmental Exposure Risks")
+    st.markdown("### 🦠 Occupational & Environmental Exposure Risks[cite: 8]")
     st.markdown("""
     <div class="clinical-card">
         <strong>1. Acute UV Radiation Burns & Cutaneous Carcinogenesis</strong><br>
@@ -632,7 +632,7 @@ elif app_mode == "👕 Clothing & Protection Rx":
 
     if st.button("Get Textile & Gear Recommendation", type="primary"):
         env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
-        st.markdown("### 🥼 Recommended Protective Wear")
+        st.markdown("### 🥼 Recommended Protective Wear[cite: 8]")
         st.markdown(f"""
         <div class="clinical-card">
             <strong>Gear Advisory (Activity: {activity_type} | UV Index: {env['uv']} | Temp: {env['temp']}°C):</strong><br>
@@ -642,7 +642,7 @@ elif app_mode == "👕 Clothing & Protection Rx":
         """, unsafe_allow_html=True)
 
     st.write("---")
-    st.markdown("#### 📥 Section-Specific Clothing & Protection PDF Report")
+    st.markdown("#### 📥 Section-Specific Clothing & Protection PDF Report[cite: 8]")
     env_c = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     metrics_clothing = [
         ["UV Index", f"{env_c['uv']}", "< 3.0", "Solar radiation and skin burn risk index"],
@@ -658,18 +658,18 @@ elif app_mode == "👕 Clothing & Protection Rx":
         {"title": "Thermal-Adaptive Layering", "details": "Utilize breathable moisture-wicking fabrics to manage perspiration and prevent chafing."}
     ]
     pdf_bytes_c = generate_section_specific_pdf("Clothing & Protection Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_c, metrics_clothing, clinical_clothing, solutions_clothing)
-    st.download_button("📥 Download Clothing PDF Report", data=pdf_bytes_c, file_name="Clothing_Protection_Report.pdf", mime="application/pdf", type="primary")
+    st.download_button("📥 Download Clothing PDF Report[cite: 8]", data=pdf_bytes_c, file_name="Clothing_Protection_Report.pdf", mime="application/pdf", type="primary")
 
 
 # ==========================================
 # PAGE 5: LIVE WEATHER & CLIMATE DASHBOARD
 # ==========================================
 elif app_mode == "⛅ Live Weather & Climate Dashboard":
-    st.markdown("# ⛅ Live Weather & Climate Dashboard")
-    st.markdown("##### *Real-time meteorological tracking, air quality indices, disease risks, and pollution monitoring with public health advisories.*")
+    st.markdown("# ⛅ Live Weather & Climate Dashboard[cite: 8]")
+    st.markdown("##### *Real-time meteorological tracking, air quality indices, disease risks, and pollution monitoring with public health advisories.*[cite: 8]")
     st.write("---")
     
-    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Live meteorological telemetry and air quality metrics fetched via WeatherAPI. Pincode: 422001.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="source-citation"><strong>Data Sources:</strong> Live meteorological telemetry and air quality metrics fetched via WeatherAPI. Pincode: 422001.[cite: 8]</div>', unsafe_allow_html=True)
 
     dash_env = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
     
@@ -679,7 +679,7 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
     c3.metric("💨 Wind Speed", f"{dash_env['wind']} km/h")
     c4.metric("☀️ UV Index", f"{dash_env['uv']}")
     
-    st.markdown("### 🌫️ Detailed Air Quality, Disease Risk & Health Impact Breakdown")
+    st.markdown("### 🌫️ Detailed Air Quality, Disease Risk & Health Impact Breakdown[cite: 8]")
     ac1, ac2, ac3 = st.columns(3)
     ac1.metric("PM2.5 Fine Particles", f"{round(dash_env['pm25'], 1)} µg/m³")
     ac2.metric("PM10 Dust Particles", f"{round(dash_env['pm10'], 1)} µg/m³")
@@ -695,7 +695,7 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
     """, unsafe_allow_html=True)
 
     st.write("---")
-    st.markdown("#### 📥 Section-Specific Weather & Climate PDF Report")
+    st.markdown("#### 📥 Section-Specific Weather & Climate PDF Report[cite: 8]")
     metrics_weather = [
         ["Temperature", f"{dash_env['temp']}°C", "18°C - 27°C", "Thermal comfort and metabolic heat load"],
         ["Humidity", f"{dash_env['humidity']}%", "40% - 60%", "Pathogen and mosquito vector incubation index"],
@@ -710,7 +710,8 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
     solutions_weather = [
         {"title": "Real-Time Exposure Monitoring", "details": "Track hourly meteorological shifts and limit outdoor exertion during peak pollution spikes."},
         {"title": "Indoor Air Filtration", "details": "Deploy HEPA air purifiers indoors when ambient PM2.5 exceeds safety thresholds."},
-        {"title": "Public Health Advisory Compliance", "details": "Adhere to local municipal advisories regarding vector control and heatwave hydration."}
+        {"title": "Public health advisory compliance", "details": "Adhere to local municipal advisories regarding vector control and heatwave hydration."}
     ]
     pdf_bytes_w = generate_section_specific_pdf("Live Weather & Climate Dashboard", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, dash_env, metrics_weather, clinical_weather, solutions_weather)
-    st.download_button("📥 Download Weather PDF Report", data=pdf_bytes_w, file_name="Weather_Dashboard_Report.pdf", mime="application/pdf", type="primary")
+    st.download_button("📥 Download Weather PDF Report[cite: 8]", data=pdf_bytes_w, file_name="Weather_Dashboard_Report.pdf", mime="application/pdf", type="primary")
+```[cite: 8]
