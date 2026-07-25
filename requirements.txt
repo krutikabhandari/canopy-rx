@@ -1,7 +1,7 @@
 streamlit
-folium
 streamlit-folium
+folium
 requests
 geopy
 reportlab
-google-genai
+google-generativeai
