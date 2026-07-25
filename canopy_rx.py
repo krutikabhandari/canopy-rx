@@ -402,67 +402,69 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
         st.markdown(cleaned_response)
         st.markdown('</div>', unsafe_allow_html=True)
 
-st.write("---")
-col_map, col_rep = st.columns([3, 2])
+    st.write("---")
+    col_map, col_rep = st.columns([3, 2])
     
-with col_map:
-    st.markdown("#### 🗺️ Selected Region Map Boundary with Radius Buffer & Coordinates")
+    with col_map:
+        st.markdown("#### 🗺️ Selected Region Map Boundary with Radius Buffer & Coordinates")
         
-    # Initialize Folium Map centered on current coordinates
-    m = folium.Map(location=[st.session_state.lat, st.session_state.lon], zoom_start=14)
+        # Initialize Folium Map centered on current coordinates
+        m = folium.Map(location=[st.session_state.lat, st.session_state.lon], zoom_start=14)
         
-    # Use clean HTML custom div icon to avoid any broken image placeholders entirely
-    custom_icon = folium.DivIcon(html="""
-        <div style="font-size: 24px; color: #0d8a72; text-shadow: 1px 1px 2px white; font-weight: bold;">📍</div>
-    """)
+        # Use clean HTML custom div icon to avoid any broken image placeholders entirely
+        custom_icon = folium.DivIcon(html="""
+            <div style="font-size: 24px; color: #0d8a72; text-shadow: 1px 1px 2px white; font-weight: bold;">📍</div>
+        """)
         
-    folium.Marker(
-        [st.session_state.lat, st.session_state.lon], 
-        popup=f"{resolved_display} (Lat: {st.session_state.lat:.4f}, Lon: {st.session_state.lon:.4f})",
-        icon=custom_icon
-    ).add_to(m)
+        folium.Marker(
+            [st.session_state.lat, st.session_state.lon], 
+            popup=f"{resolved_display} (Lat: {st.session_state.lat:.4f}, Lon: {st.session_state.lon:.4f})",
+            icon=custom_icon
+        ).add_to(m)
         
-    folium.Circle(
-        radius=diagnostic_radius,
-        location=[st.session_state.lat, st.session_state.lon],
-        color="#0d8a72",
-        fill=True,
-        fill_color="#0d8a72",
-        fill_opacity=0.2,
-        popup=f"Analysis Radius: {diagnostic_radius}m"
-    ).add_to(m)
+        folium.Circle(
+            radius=diagnostic_radius,
+            location=[st.session_state.lat, st.session_state.lon],
+            color="#0d8a72",
+            fill=True,
+            fill_color="#0d8a72",
+            fill_opacity=0.2,
+            popup=f"Analysis Radius: {diagnostic_radius}m"
+        ).add_to(m)
         
-    st_folium(m, width=580, height=320, key="spatial_map_fixed_clean")
+        st_folium(m, width=580, height=320, key="spatial_map_fixed_clean")
 
-with col_rep:
-    st.markdown("#### 📥 Section-Specific Spatial PDF Report")
-    st.write("Download the structured professional report containing comprehensive multi-parameter metrics, green plant prescriptions, and localized architectural solutions.")
+    with col_rep:
+        st.markdown("#### 📥 Section-Specific Spatial PDF Report")
+        st.write("Download the structured professional report containing comprehensive multi-parameter metrics, green plant prescriptions, and localized architectural solutions.")
         
-    metrics_spatial = [
-        ["Canopy Coverage", f"{canopy_coverage}%", "> 30%", "Urban shade and dust filtration capacity"],
-        ["PM2.5 Particulate", f"{round(env['pm25'], 1)} µg/m³", "< 15 µg/m³", "Deep lung alveolar penetration risk"],
-        ["PM10 Dust Load", f"{round(env['pm10'], 1)} µg/m³", "< 45 µg/m³", "Upper respiratory tract irritation index"],
-        ["Nitrogen Dioxide", f"{round(env['no2'], 1)} µg/m³", "< 40 µg/m³", "Bronchial inflammation & oxidative stress"],
-        ["Apparent Temp", f"{round(apparent_temp, 1)}°C", "18°C - 27°C", "Cardiovascular thermal workload stress"]
-    ]
-    clinical_spatial = [
-        {"condition": "COPD & Asthma Exacerbation", "risk_factor": f"PM2.5 load at {round(env['pm25'],1)} µg/m³ triggers chronic airway inflammation."},
-        {"condition": "Urban Heat Island Strain", "risk_factor": f"Apparent heat {round(apparent_temp,1)}°C increases cardiovascular workload."}
-    ]
-    solutions_spatial = [
-        {"title": "Phytoremediation Planting", "details": "Plant Azadirachta indica and Polyalthia longifolia perimeter rows for particulate filtration."},
-        {"title": "Vertical Green Architecture", "details": "Install biophilic exterior green walls and cool roof high-albedo coatings to reduce urban heat absorption."}
-    ]
+        metrics_spatial = [
+            ["Canopy Coverage", f"{canopy_coverage}%", "> 30%", "Urban shade and dust filtration capacity"],
+            ["PM2.5 Particulate", f"{round(env['pm25'], 1)} µg/m³", "< 15 µg/m³", "Deep lung alveolar penetration risk"],
+            ["PM10 Dust Load", f"{round(env['pm10'], 1)} µg/m³", "< 45 µg/m³", "Upper respiratory tract irritation index"],
+            ["Nitrogen Dioxide", f"{round(env['no2'], 1)} µg/m³", "< 40 µg/m³", "Bronchial inflammation & oxidative stress"],
+            ["Apparent Temp", f"{round(apparent_temp, 1)}°C", "18°C - 27°C", "Cardiovascular thermal workload stress"]
+        ]
+        clinical_spatial = [
+            {"condition": "COPD & Asthma Exacerbation", "risk_factor": f"PM2.5 load at {round(env['pm25'],1)} µg/m³ triggers chronic airway inflammation."},
+            {"condition": "Urban Heat Island Strain", "risk_factor": f"Apparent heat {round(apparent_temp,1)}°C increases cardiovascular workload."}
+        ]
+        solutions_spatial = [
+            {"title": "Phytoremediation Planting", "details": "Plant Azadirachta indica and Polyalthia longifolia perimeter rows for particulate filtration."},
+            {"title": "Vertical Green Architecture", "details": "Install biophilic exterior green walls and cool roof high-albedo coatings to reduce urban heat absorption."}
+        ]
 
-    pdf_bytes = generate_section_specific_pdf("Spatial Engine & Green Engineering", resolved_display, st.session_state.lat, st.session_state.lon, env, metrics_spatial, clinical_spatial, solutions_spatial)
-    st.download_button(
-        label="📥 Download Spatial PDF Report",
-        data=pdf_bytes,
-        file_name=f"CanopyRx_Spatial_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-        mime="application/pdf",
-        type="primary",
-        use_container_width=True
-    )
+        pdf_bytes = generate_section_specific_pdf("Spatial Engine & Green Engineering", resolved_display, st.session_state.lat, st.session_state.lon, env, metrics_spatial, clinical_spatial, solutions_spatial)
+        st.download_button(
+            label="📥 Download Spatial PDF Report",
+            data=pdf_bytes,
+            file_name=f"CanopyRx_Spatial_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            mime="application/pdf",
+            type="primary",
+            use_container_width=True
+        )
+
+
 # ==========================================
 # PAGE 1B: TRAVEL RX PLANNER & JOURNEY MODE
 # ==========================================
@@ -808,3 +810,4 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
         mime="application/pdf",
         type="primary"
     )
+```[cite: 3]
