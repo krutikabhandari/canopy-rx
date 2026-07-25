@@ -75,6 +75,16 @@ st.markdown("""
         margin-top: 12px;
         margin-bottom: 18px;
     }
+    .plant-badge {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        padding: 14px;
+        border-radius: 8px;
+        text-align: center;
+        color: #166534;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -103,7 +113,7 @@ if "weather_ai_response" not in st.session_state:
 API_KEY = "1a7d7e605314430bb7b81210261707"  # WeatherAPI Key
 
 def fetch_environmental_data(latitude, longitude):
-    url = "[https://api.weatherapi.com/v1/current.json](https://api.weatherapi.com/v1/current.json)"
+    url = "https://api.weatherapi.com/v1/current.json"
     params = {"key": API_KEY, "q": f"{latitude},{longitude}", "aqi": "yes"}
     try:
         res = requests.get(url, params=params, timeout=8)
@@ -133,7 +143,7 @@ def fetch_environmental_data(latitude, longitude):
 
 def geocode_location(query):
     try:
-        geolocator = Nominatim(user_agent="canopyrx_clinical_engine_v16")
+        geolocator = Nominatim(user_agent="canopyrx_clinical_engine_v18")
         loc = geolocator.geocode(query, timeout=10)
         if loc:
             return loc.latitude, loc.longitude, loc.address
@@ -345,17 +355,15 @@ elif app_mode == "🌍 CanopyRx Spatial Engine & Green Engineering":
     m8.metric("☀️ Ozone (O3)", f"{round(env['o3'], 1)} µg/m³", "[Safe: <100]")
 
     st.write("---")
-    st.markdown("### 🌿 Specific Green Prescription & Visual Tree Recommendations")
+    st.markdown("### 🌿 Specific Green Prescription & Botanical Recommendations")
     
     col_tree1, col_tree2 = st.columns(2)
     with col_tree1:
-        st.markdown("##### 1. *Azadirachta indica* (Neem)")
-        st.markdown("![Azadirachta indica](https://images.unsplash.com/photo-1593121926326-8854c6020593?q=80&w=600&auto=format&fit=crop)")
-        st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Releases terpene-based phytoncides that suppress airborne fungal spores in high humidity.</p>", unsafe_allow_html=True)
+        st.markdown('<div class="plant-badge">🌳 Azadirachta indica (Neem)</div>', unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Releases terpene-based phytoncides that suppress airborne fungal spores in high humidity and filter fine particulates.</p>", unsafe_allow_html=True)
     with col_tree2:
-        st.markdown("##### 2. *Polyalthia longifolia* (False Ashoka)")
-        st.markdown("![Polyalthia longifolia](https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?q=80&w=600&auto=format&fit=crop)")
-        st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Dense canopy architecture acts as a natural wind buffer and particulate precipitation surface.</p>", unsafe_allow_html=True)
+        st.markdown('<div class="plant-badge">🌿 Polyalthia longifolia (False Ashoka)</div>', unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 13px; color: #475569;'><b>Clinical Value:</b> Dense vertical canopy architecture acts as a natural wind buffer and particulate precipitation surface.</p>", unsafe_allow_html=True)
 
     st.markdown("""
     <div class="clinical-card" style="margin-top: 15px;">
@@ -457,49 +465,64 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
     with tab1:
         st.markdown("### Pre-Travel Climate & Exposure Comparison")
         oc1, oc2 = st.columns(2)
+        
         with oc1:
             st.markdown("#### Origin Specification")
-            orig_type = st.radio("Origin Input Type:", ["City / Pincode", "Coordinates (Lat/Lon)"], key="orig_type")
+            orig_type = st.radio("Origin Input Type:", ["City / Pincode", "Coordinates (Lat/Lon)"], key="orig_type_select")
+            if "travel_orig_lat" not in st.session_state:
+                st.session_state.travel_orig_lat = 19.9975
+            if "travel_orig_lon" not in st.session_state:
+                st.session_state.travel_orig_lon = 73.7898
+
             if orig_type == "City / Pincode":
-                orig_query = st.text_input("Origin City / Pincode:", "Nashik 422001", key="orig_q")
-                orig_lat, orig_lon = 19.9975, 73.7898
+                orig_query = st.text_input("Origin City / Pincode:", "Nashik 422001", key="orig_query_input")
                 if orig_query:
                     lat_o, lon_o, _ = geocode_location(orig_query)
                     if lat_o and lon_o:
-                        orig_lat, orig_lon = lat_o, lon_o
+                        st.session_state.travel_orig_lat = lat_o
+                        st.session_state.travel_orig_lon = lon_o
             else:
-                orig_lat = st.number_input("Origin Latitude:", value=19.9975, format="%.4f", key="orig_lat_in")
-                orig_lon = st.number_input("Origin Longitude:", value=73.7898, format="%.4f", key="orig_lon_in")
+                st.session_state.travel_orig_lat = st.number_input("Origin Latitude:", value=st.session_state.travel_orig_lat, format="%.4f", key="orig_lat_input")
+                st.session_state.travel_orig_lon = st.number_input("Origin Longitude:", value=st.session_state.travel_orig_lon, format="%.4f", key="orig_lon_input")
 
         with oc2:
             st.markdown("#### Destination Specification")
-            dest_type = st.radio("Destination Input Type:", ["City / Pincode", "Coordinates (Lat/Lon)"], key="dest_type")
+            dest_type = st.radio("Destination Input Type:", ["City / Pincode", "Coordinates (Lat/Lon)"], key="dest_type_select")
+            if "travel_dest_lat" not in st.session_state:
+                st.session_state.travel_dest_lat = 19.0760
+            if "travel_dest_lon" not in st.session_state:
+                st.session_state.travel_dest_lon = 72.8777
+
             if dest_type == "City / Pincode":
-                dest_query = st.text_input("Destination City / Pincode:", "Mumbai 400001", key="dest_q")
-                dest_lat, dest_lon = 19.0760, 72.8777
+                dest_query = st.text_input("Destination City / Pincode:", "Mumbai 400001", key="dest_query_input")
                 if dest_query:
                     lat_d, lon_d, _ = geocode_location(dest_query)
                     if lat_d and lon_d:
-                        dest_lat, dest_lon = lat_d, lon_d
+                        st.session_state.travel_dest_lat = lat_d
+                        st.session_state.travel_dest_lon = lon_d
             else:
-                dest_lat = st.number_input("Destination Latitude:", value=19.0760, format="%.4f", key="dest_lat_in")
-                dest_lon = st.number_input("Destination Longitude:", value=72.8777, format="%.4f", key="dest_lon_in")
+                st.session_state.travel_dest_lat = st.number_input("Destination Latitude:", value=st.session_state.travel_dest_lat, format="%.4f", key="dest_lat_input")
+                st.session_state.travel_dest_lon = st.number_input("Destination Longitude:", value=st.session_state.travel_dest_lon, format="%.4f", key="dest_lon_input")
             
         if st.button("Calculate Travel Delta", type="primary"):
-            d_orig = fetch_environmental_data(orig_lat, orig_lon)
-            d_dest = fetch_environmental_data(dest_lat, dest_lon)
+            o_lat, o_lon = st.session_state.travel_orig_lat, st.session_state.travel_orig_lon
+            d_lat, d_lon = st.session_state.travel_dest_lat, st.session_state.travel_dest_lon
+
+            d_orig = fetch_environmental_data(o_lat, o_lon)
+            d_dest = fetch_environmental_data(d_lat, d_lon)
+            
             t_diff = d_dest["temp"] - d_orig["temp"]
             pm_diff = d_dest["pm25"] - d_orig["pm25"]
             
             tc1, tc2, tc3 = st.columns(3)
             tc1.metric("Temperature Shift", f"{round(t_diff, 1)}°C", f"Dest: {d_dest['temp']}°C")
             tc2.metric("PM2.5 Particulate Shift", f"{round(pm_diff, 1)} µg/m³", f"Dest: {d_dest['pm25']} µg/m³")
-            tc3.metric("UV Index Delta", f"{d_dest['uv'] - d_orig['uv']}")
+            tc3.metric("UV Index Delta", f"{round(d_dest['uv'] - d_orig['uv'], 1)}")
 
             with st.spinner("Analyzing travel climate shift..."):
                 t_prompt = f"""
-                Analyze the health and acclimatization impacts of traveling from Origin (Lat: {orig_lat}, Lon: {orig_lon}, Temp: {d_orig['temp']}°C, PM2.5: {d_orig['pm25']} µg/m³) 
-                to Destination (Lat: {dest_lat}, Lon: {dest_lon}, Temp: {d_dest['temp']}°C, PM2.5: {d_dest['pm25']} µg/m³).
+                Analyze the health and acclimatization impacts of traveling from Origin (Lat: {o_lat}, Lon: {o_lon}, Temp: {d_orig['temp']}°C, PM2.5: {d_orig['pm25']} µg/m³) 
+                to Destination (Lat: {d_lat}, Lon: {d_lon}, Temp: {d_dest['temp']}°C, PM2.5: {d_dest['pm25']} µg/m³).
                 Provide practical clinical precautions, hydration protocols, and respiratory protection advice tailored precisely to this journey.
                 """
                 st.session_state.travel_ai_response = generate_gemini_clinical_insight(t_prompt)
@@ -515,13 +538,39 @@ elif app_mode == "✈️ Travel Rx Planner & Journey Mode":
             st.markdown(cleaned_travel)
             st.markdown('</div>', unsafe_allow_html=True)
 
+        st.write("---")
+        st.markdown("#### 📥 Download Travel Rx PDF Report")
+        o_lat, o_lon = st.session_state.get("travel_orig_lat", 19.9975), st.session_state.get("travel_orig_lon", 73.7898)
+        d_lat, d_lon = st.session_state.get("travel_dest_lat", 19.0760), st.session_state.get("travel_dest_lon", 72.8777)
+        d_dest = fetch_environmental_data(d_lat, d_lon)
+        
+        metrics_travel = [
+            ["Destination Temp", f"{d_dest['temp']}°C", "18°C - 27°C", "Thermal shift adaptation workload"],
+            ["Destination PM2.5", f"{d_dest['pm25']} µg/m³", "< 15 µg/m³", "Route particulate exposure index"]
+        ]
+        clinical_travel = [{"condition": "Acclimatization & Respiratory Strain", "risk_factor": "Shifting environmental parameters require targeted hydration and N95 protection."}]
+        solutions_travel = [{"title": "Pre-Travel Acclimatization", "details": "Follow custom hydration and barrier protocols during transit corridor."}]
+        
+        pdf_bytes_travel = generate_section_specific_pdf("Travel Rx Planner", f"Lat: {d_lat}, Lon: {d_lon}", d_lat, d_lon, d_dest, metrics_travel, clinical_travel, solutions_travel)
+        st.download_button(
+            label="📥 Download Travel Rx PDF Report",
+            data=pdf_bytes_travel,
+            file_name=f"CanopyRx_Travel_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+            mime="application/pdf",
+            type="primary"
+        )
+
     with tab2:
         st.markdown("### Commuter Journey Route Exposure Map")
-        journey_map = folium.Map(location=[19.5367, 73.3338], zoom_start=9)
-        folium.Marker([19.9975, 73.7898], popup="Origin", icon=folium.Icon(color="green")).add_to(journey_map)
-        folium.Marker([19.0760, 72.8777], popup="Destination", icon=folium.Icon(color="red")).add_to(journey_map)
-        folium.PolyLine([[19.9975, 73.7898], [19.0760, 72.8777]], color="#0d8a72", weight=4, opacity=0.8, tooltip="Commuter Corridor").add_to(journey_map)
-        st_folium(journey_map, width=800, height=380, key="journey_map_fixed")
+        o_lat, o_lon = st.session_state.get("travel_orig_lat", 19.9975), st.session_state.get("travel_orig_lon", 73.7898)
+        d_lat, d_lon = st.session_state.get("travel_dest_lat", 19.0760), st.session_state.get("travel_dest_lon", 72.8777)
+        mid_lat, mid_lon = (o_lat + d_lat) / 2, (o_lon + d_lon) / 2
+        
+        journey_map = folium.Map(location=[mid_lat, mid_lon], zoom_start=8)
+        folium.Marker([o_lat, o_lon], popup="Origin", icon=folium.Icon(color="green")).add_to(journey_map)
+        folium.Marker([d_lat, d_lon], popup="Destination", icon=folium.Icon(color="red")).add_to(journey_map)
+        folium.PolyLine([[o_lat, o_lon], [d_lat, d_lon]], color="#0d8a72", weight=4, opacity=0.8, tooltip="Commuter Corridor").add_to(journey_map)
+        st_folium(journey_map, width=800, height=380, key="journey_map_dynamic")
 
 
 # ==========================================
@@ -570,6 +619,25 @@ elif app_mode == "🧴 Skin & Hair Rx":
         st.markdown(cleaned_skin)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    st.write("---")
+    st.markdown("#### 📥 Download Skin & Hair Rx PDF Report")
+    env_sh = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
+    metrics_skin = [
+        ["Water Hardness", f"{water_hardness} ppm", "< 150 ppm", "Mineral scaling & hair cuticle rigidity index"],
+        ["UV Exposure", f"{env_sh['uv']} UV Index", "< 3.0", "Cutaneous photo-aging & oxidative stress risk"]
+    ]
+    clinical_skin = [{"condition": "Skin Barrier Compromise & Mineral Deposition", "risk_factor": "Hard water and UV exposure weaken lipid bilayers."}]
+    solutions_skin = [{"title": "Chelating Regimen", "details": "Incorporate chelating shampoos and ceramide-dominant barrier repair moisturizers."}]
+    
+    pdf_bytes_skin = generate_section_specific_pdf("Skin & Hair Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_sh, metrics_skin, clinical_skin, solutions_skin)
+    st.download_button(
+        label="📥 Download Skin & Hair Rx PDF Report",
+        data=pdf_bytes_skin,
+        file_name=f"CanopyRx_Skin_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
+
 
 # ==========================================
 # PAGE 3: DIETETICS & NUTRITION RX
@@ -612,6 +680,25 @@ elif app_mode == "🥗 Dietetics & Nutrition Rx":
         st.markdown(cleaned_nutri)
         st.markdown('</div>', unsafe_allow_html=True)
 
+    st.write("---")
+    st.markdown("#### 📥 Download Dietetics & Nutrition Rx PDF Report")
+    env_nutri = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
+    metrics_nutri = [
+        ["Particulate Load (PM2.5)", f"{env_nutri['pm25']} µg/m³", "< 15 µg/m³", "Pulmonary oxidative stress index"],
+        ["Ambient Temperature", f"{env_nutri['temp']}°C", "18°C - 27°C", "Hydration electrolyte depletion rate"]
+    ]
+    clinical_nutri = [{"condition": "Oxidative Lung Stress", "risk_factor": "Elevated particulate inhalation demands systemic antioxidant support."}]
+    solutions_nutri = [{"title": "Pulmonary Antioxidant Protocol", "details": "Prescribe Vitamin C, E, and omega-3 rich anti-inflammatory dietary inputs."}]
+    
+    pdf_bytes_nutri = generate_section_specific_pdf("Dietetics & Nutrition Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_nutri, metrics_nutri, clinical_nutri, solutions_nutri)
+    st.download_button(
+        label="📥 Download Nutrition Rx PDF Report",
+        data=pdf_bytes_nutri,
+        file_name=f"CanopyRx_Nutrition_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
+
 
 # ==========================================
 # PAGE 4: CLOTHING & PROTECTION RX
@@ -631,6 +718,25 @@ elif app_mode == "👕 Clothing & Protection Rx":
             - <strong>Fabric Selection:</strong> Breathable, tightly-woven organic cotton or performance synthetics with UPF 50+ sun protection rating to counteract local UV levels.
         </div>
         """, unsafe_allow_html=True)
+
+    st.write("---")
+    st.markdown("#### 📥 Download Clothing & Protection Rx PDF Report")
+    env_cloth = fetch_environmental_data(st.session_state.lat, st.session_state.lon)
+    metrics_cloth = [
+        ["UV Index", f"{env_cloth['uv']}", "< 3.0", "Ultraviolet radiation skin penetration index"],
+        ["PM2.5 Particulate", f"{env_cloth['pm25']} µg/m³", "< 15 µg/m³", "Inhalation filtration requirement"]
+    ]
+    clinical_cloth = [{"condition": "Ultraviolet & Particulate Exposure", "risk_factor": "Direct exposure requires UPF 50+ textiles and N95 filtration."}]
+    solutions_cloth = [{"title": "Protective Gear Specification", "details": "Deploy certified UPF 50+ garments and N95 respirators for outdoor exposure."}]
+    
+    pdf_bytes_cloth = generate_section_specific_pdf("Clothing & Protection Rx", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, env_cloth, metrics_cloth, clinical_cloth, solutions_cloth)
+    st.download_button(
+        label="📥 Download Clothing Rx PDF Report",
+        data=pdf_bytes_cloth,
+        file_name=f"CanopyRx_Clothing_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
 
 
 # ==========================================
@@ -671,3 +777,21 @@ elif app_mode == "⛅ Live Weather & Climate Dashboard":
         )
         st.markdown(cleaned_weather)
         st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("---")
+    st.markdown("#### 📥 Download Weather Dashboard PDF Report")
+    metrics_weather = [
+        ["Temperature", f"{dash_env['temp']}°C", "18°C - 27°C", "Thermal comfort index"],
+        ["Humidity", f"{dash_env['humidity']}%", "30% - 60%", "Microclimatic moisture saturation"]
+    ]
+    clinical_weather = [{"condition": "Meteorological Stress", "risk_factor": "Real-time weather extremes require public health vigilance."}]
+    solutions_weather = [{"title": "Public Health Protocol", "details": "Adhere to localized advisory guidelines and heat stress mitigation steps."}]
+    
+    pdf_bytes_weather = generate_section_specific_pdf("Live Weather Dashboard", st.session_state.resolved_address, st.session_state.lat, st.session_state.lon, dash_env, metrics_weather, clinical_weather, solutions_weather)
+    st.download_button(
+        label="📥 Download Weather PDF Report",
+        data=pdf_bytes_weather,
+        file_name=f"CanopyRx_Weather_Report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+        mime="application/pdf",
+        type="primary"
+    )
